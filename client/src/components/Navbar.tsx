@@ -1,9 +1,10 @@
 /*
- * AOCN Navbar — Ice Blue + Violet theme
- * 固定顶部导航，可切换模块（含新手专区）
+ * AOCN Navbar — Clean style with top banner + theme toggle
+ * Matches reference image 3: gradient top bar, clean nav, moon icon
  */
 import { useLang } from '@/contexts/LanguageContext';
-import { Globe, ExternalLink, Sparkles, Menu, X } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Globe, ExternalLink, Sparkles, Menu, X, Sun, Moon } from 'lucide-react';
 import { useState } from 'react';
 
 const LOGO_URL = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663427415692/ByMrgW2BXPeym8jL7YKc6Z/aocn-logo_b94bea11.png';
@@ -26,6 +27,7 @@ const tabs = [
 
 export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
   const { lang, toggleLang, t } = useLang();
+  const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleTabClick = (tabId: string) => {
@@ -34,82 +36,102 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.05]"
-      style={{ background: 'rgba(8,8,16,0.88)', backdropFilter: 'blur(24px)' }}>
-      <div className="container flex items-center justify-between h-14">
-        {/* Logo */}
-        <div className="flex items-center gap-2.5 shrink-0 cursor-pointer" onClick={() => handleTabClick('dashboard')}>
-          <img src={LOGO_URL} alt="AOCN" className="w-8 h-8 rounded-lg" />
-          <span className="text-[15px] font-bold tracking-wide text-gradient">AOCN</span>
+    <>
+      {/* Top gradient banner bar */}
+      <div className="top-banner fixed top-0 left-0 right-0 z-[60] flex items-center justify-center gap-4 px-4 py-1.5 text-xs font-medium">
+        <span>{t('官方:', 'Official:')}</span>
+        <a href="https://x.com/renaissxyz" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline">
+          <span className="font-bold">𝕏</span> Renaiss
+        </a>
+        <a href="https://x.com/renaiss_cn" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline">
+          <span className="font-bold">𝕏</span> {t('中文官方', 'Chinese')}
+        </a>
+        <a href="https://discord.gg/renaiss" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline">
+          Discord
+        </a>
+        <span className="hidden sm:inline text-white/70">|</span>
+        <span className="hidden sm:inline text-white/80">{t('作者:', 'By:')} 小天才77Ouo  Kuromon  Nora</span>
+      </div>
+
+      {/* Main navbar */}
+      <nav className="fixed top-[30px] left-0 right-0 z-50 border-b border-border bg-background/90 backdrop-blur-xl">
+        <div className="container flex items-center justify-between h-14">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5 shrink-0 cursor-pointer" onClick={() => handleTabClick('dashboard')}>
+            <img src={LOGO_URL} alt="AOCN" className="w-8 h-8 rounded-lg" />
+            <span className="text-[15px] font-bold text-foreground">Renaiss {t('套利分析', 'Arbitrage')}</span>
+          </div>
+
+          {/* Desktop Tabs */}
+          <div className="hidden lg:flex items-center gap-0.5 mx-6">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => handleTabClick(tab.id)}
+                className={`nav-link text-[13px] px-3 py-1.5 transition-all duration-200 flex items-center gap-1.5 ${
+                  activeTab === tab.id ? 'active' : ''
+                }`}
+              >
+                {tab.highlight && <Sparkles className="w-3 h-3" />}
+                {lang === 'zh' ? tab.zh : tab.en}
+              </button>
+            ))}
+          </div>
+
+          {/* Right actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Live indicator */}
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground">
+              <div className="live-dot" />
+              {t('实时数据', 'Live Data')}
+            </div>
+
+            {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              className="flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+              title={theme === 'dark' ? t('切换浅色', 'Light mode') : t('切换暗黑', 'Dark mode')}
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
+            {/* Language toggle */}
+            <button
+              onClick={toggleLang}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              {lang === 'zh' ? 'EN' : '中文'}
+            </button>
+
+            {/* Mobile menu toggle */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden flex items-center justify-center w-9 h-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+            >
+              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
 
-        {/* Desktop Tabs */}
-        <div className="hidden lg:flex items-center gap-0.5 mx-6">
+        {/* Mobile tabs - horizontal scroll */}
+        <div className="lg:hidden flex overflow-x-auto gap-0.5 px-4 pb-2 scrollbar-hide">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => handleTabClick(tab.id)}
-              className={`nav-link text-[13px] px-3 py-1.5 rounded-md transition-all duration-200 flex items-center gap-1.5 ${
+              className={`whitespace-nowrap text-[12px] px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${
                 activeTab === tab.id
-                  ? 'active text-white bg-white/[0.06]'
-                  : tab.highlight
-                    ? 'text-ice/60 hover:text-ice hover:bg-ice/[0.05]'
-                    : 'text-white/40 hover:text-white/65 hover:bg-white/[0.03]'
+                  ? 'text-primary bg-primary/5 font-medium'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
               }`}
             >
-              {tab.highlight && <Sparkles className="w-3 h-3" />}
+              {tab.highlight && <Sparkles className="w-2.5 h-2.5" />}
               {lang === 'zh' ? tab.zh : tab.en}
             </button>
           ))}
         </div>
-
-        {/* Right actions */}
-        <div className="flex items-center gap-2 shrink-0">
-          <a
-            href="https://www.renaiss.xyz/marketplace"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden sm:flex items-center gap-1.5 text-[12px] text-white/35 hover:text-ice transition-colors"
-          >
-            {t('市场', 'Market')}
-            <ExternalLink className="w-3 h-3" />
-          </a>
-          <button
-            onClick={toggleLang}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] text-white/45 hover:text-white/75 hover:bg-white/[0.04] transition-all"
-          >
-            <Globe className="w-3.5 h-3.5" />
-            {lang === 'zh' ? 'EN' : '中文'}
-          </button>
-          {/* Mobile menu toggle */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden flex items-center justify-center w-8 h-8 rounded-md text-white/50 hover:text-white/80 hover:bg-white/[0.05] transition-all"
-          >
-            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile tabs - horizontal scroll */}
-      <div className="lg:hidden flex overflow-x-auto gap-0.5 px-4 pb-2 scrollbar-hide">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => handleTabClick(tab.id)}
-            className={`whitespace-nowrap text-[12px] px-3 py-1.5 rounded-md transition-all flex items-center gap-1 ${
-              activeTab === tab.id
-                ? 'text-white bg-white/[0.07]'
-                : tab.highlight
-                  ? 'text-ice/50 hover:text-ice'
-                  : 'text-white/35 hover:text-white/55'
-            }`}
-          >
-            {tab.highlight && <Sparkles className="w-2.5 h-2.5" />}
-            {lang === 'zh' ? tab.zh : tab.en}
-          </button>
-        ))}
-      </div>
-    </nav>
+      </nav>
+    </>
   );
 }

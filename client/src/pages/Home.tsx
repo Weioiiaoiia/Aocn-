@@ -1,6 +1,5 @@
 /*
- * Design: AOCN Main Layout — Ice Blue + Violet
- * 顶部导航切换 + 各模块渲染 + 底部Footer
+ * AOCN Main Layout — Clean theme with top banner
  */
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
@@ -48,8 +47,8 @@ export default function Home() {
     <div className="min-h-screen bg-background text-foreground">
       <Navbar activeTab={activeTab} onTabChange={handleTabChange} />
 
-      {/* Main content with top padding for fixed navbar */}
-      <main className="container pt-20 md:pt-16 pb-8">
+      {/* Main content — offset for top banner (30px) + navbar (56px) + mobile tabs */}
+      <main className="container pt-28 md:pt-24 pb-8">
         {renderContent()}
       </main>
 
@@ -59,7 +58,7 @@ export default function Home() {
       {showScrollTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-6 right-6 w-10 h-10 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-white/40 hover:text-white/70 hover:bg-white/[0.1] transition-all z-40 backdrop-blur-sm"
+          className="fixed bottom-6 right-6 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:shadow-xl transition-all z-40"
         >
           <ArrowUp className="w-4 h-4" />
         </button>

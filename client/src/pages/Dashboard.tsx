@@ -1,15 +1,12 @@
 /*
- * AOCN Dashboard — Ice Blue + Violet
- * Hero区域 + 新手引导入口 + 数据统计 + 精选套利 + 焦点事件
+ * AOCN Dashboard — Clean light theme matching reference image 3
+ * Hero with bold text + blue gradient + real chain data
  */
 import { useLang } from '@/contexts/LanguageContext';
 import { ecosystemStats, arbitrageCards, timelineEvents } from '@/lib/data';
 import { TrendingUp, Users, DollarSign, Layers, Calendar, ArrowRight, ExternalLink, Sparkles, BookOpen, Shield, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-
-const HERO_BG = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663427415692/ByMrgW2BXPeym8jL7YKc6Z/hero-bg-mJZBwTZJYPUCECtooN6XPo.webp';
-const CARDS_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663427415692/ByMrgW2BXPeym8jL7YKc6Z/cards-showcase-3wXnbpjUoQJmKgKRgL65zu.webp';
 
 function AnimatedNumber({ target, prefix = '' }: { target: number; prefix?: string }) {
   const [val, setVal] = useState(0);
@@ -37,86 +34,69 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const recentEvents = timelineEvents.slice(-3).reverse();
 
   const stats = [
-    { icon: Users, label: t('总用户', 'Total Users'), value: ecosystemStats.totalUsers, prefix: '', suffix: '+' },
-    { icon: DollarSign, label: t('交易总额', 'Total Volume'), value: ecosystemStats.totalVolume, prefix: '$', suffix: '+' },
-    { icon: Layers, label: t('链上藏品', 'On-chain Cards'), value: ecosystemStats.totalCards, prefix: '', suffix: '+' },
-    { icon: TrendingUp, label: t('合作伙伴', 'Partners'), value: ecosystemStats.partners, prefix: '', suffix: '' },
+    { icon: Users, label: t('总用户', 'Total Users'), value: ecosystemStats.totalUsers, prefix: '', suffix: '+', source: 'Phemex / KuCoin' },
+    { icon: DollarSign, label: t('交易总额', 'Total Volume'), value: ecosystemStats.totalVolume, prefix: '$', suffix: '+', source: 'BscScan' },
+    { icon: Layers, label: t('链上藏品', 'On-chain NFTs'), value: ecosystemStats.totalCards, prefix: '', suffix: '+', source: 'BscScan' },
+    { icon: TrendingUp, label: t('NFT持有者', 'NFT Holders'), value: ecosystemStats.holders, prefix: '', suffix: '', source: 'BscScan' },
   ];
 
   return (
     <div>
-      {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-2xl mb-8" style={{ minHeight: '380px' }}>
-        <div className="absolute inset-0">
-          <img src={HERO_BG} alt="" className="w-full h-full object-cover opacity-30" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#080810]/90 via-[#080810]/60 to-transparent" />
-        </div>
-        <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8 p-8 lg:p-12">
-          <div className="flex-1">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-              <h1 className="text-3xl lg:text-5xl font-bold leading-tight mb-4">
-                {t('发现 ', 'Discover ')}
-                <span className="text-gradient">{t('价值洼地', 'Value Gaps')}</span>
-                <br />
-                {t('智能套利分析', 'Smart Arbitrage')}
-              </h1>
-              <p className="text-white/45 text-sm lg:text-base max-w-lg mb-6 leading-relaxed">
-                {t(
-                  '实时监控 Renaiss Protocol 市场，自动识别低于市场价的卡片，为您提供专业的投资分析和入手建议。',
-                  'Real-time monitoring of Renaiss Protocol marketplace, automatically identifying underpriced cards with professional investment analysis.'
-                )}
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={() => onNavigate('arbitrage')}
-                  className="btn-primary px-5 py-2.5 rounded-lg text-sm"
-                >
-                  {t('开始扫描', 'Start Scanning')} →
-                </button>
-                <button
-                  onClick={() => onNavigate('beginner')}
-                  className="px-5 py-2.5 rounded-lg text-sm font-medium bg-ice/[0.08] text-ice/80 hover:bg-ice/[0.12] border border-ice/15 transition-colors flex items-center gap-2"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  {t('新手入门', 'Beginner Guide')}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-          <div className="hidden lg:block w-80 shrink-0">
-            <motion.img
-              src={CARDS_IMG}
-              alt="Collectible Cards"
-              className="w-full rounded-xl opacity-70"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 0.7, scale: 1 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-            />
-          </div>
+      {/* Hero Section — Clean style like reference image 3 */}
+      <section className="relative overflow-hidden rounded-2xl mb-8 bg-gradient-to-br from-secondary via-background to-secondary dark:from-[#0f0f1a] dark:via-[#0a0a0f] dark:to-[#0f0f1a]" style={{ minHeight: '360px' }}>
+        <div className="relative z-10 flex flex-col items-center text-center px-6 py-16 lg:py-20">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+            <h1 className="text-4xl lg:text-6xl font-extrabold leading-tight mb-5">
+              {t('发现 ', 'Discover ')}
+              <span className="text-gradient">{t('价值洼地', 'Value Gaps')}</span>
+              <br />
+              {t('智能套利分析', 'Smart Arbitrage')}
+            </h1>
+            <p className="text-muted-foreground text-base lg:text-lg max-w-2xl mx-auto mb-8 leading-relaxed">
+              {t(
+                '实时监控 Renaiss Protocol 市场，自动识别低于市场价的卡片，为您提供专业的投资分析和入手建议。',
+                'Real-time monitoring of Renaiss Protocol marketplace, automatically identifying underpriced cards with professional investment analysis.'
+              )}
+            </p>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <button
+                onClick={() => onNavigate('arbitrage')}
+                className="btn-primary px-6 py-3 rounded-xl text-sm flex items-center gap-2"
+              >
+                {t('开始扫描', 'Start Scanning')} <ArrowRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => onNavigate('beginner')}
+                className="btn-secondary px-6 py-3 rounded-xl text-sm flex items-center gap-2"
+              >
+                {t('了解更多', 'Learn More')}
+              </button>
+            </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Quick Navigation Cards — 新手引导入口 */}
+      {/* Quick Navigation Cards */}
       <section className="mb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { icon: Sparkles, title: t('新手专区', 'Beginner Zone'), desc: t('从零开始了解 Renaiss 生态', 'Learn Renaiss from scratch'), tab: 'beginner', gradient: 'from-ice/15 to-violet/10', border: 'border-ice/15', iconColor: 'text-ice' },
-            { icon: Shield, title: t('SBT 图鉴', 'SBT Atlas'), desc: t('30+ SBT 完整收录与分析', '30+ SBTs fully cataloged'), tab: 'sbt', gradient: 'from-purple-500/15 to-violet/10', border: 'border-purple-500/15', iconColor: 'text-purple-400' },
-            { icon: Zap, title: t('抽卡模拟', 'Gacha Simulator'), desc: t('模拟抽卡体验和概率分析', 'Simulate gacha experience'), tab: 'simulator', gradient: 'from-amber-500/15 to-orange-500/10', border: 'border-amber-500/15', iconColor: 'text-amber-400' },
-            { icon: BookOpen, title: t('事件中心', 'Events Hub'), desc: t('追踪 Renaiss 最新动态', 'Track latest Renaiss updates'), tab: 'events', gradient: 'from-emerald-500/15 to-teal-500/10', border: 'border-emerald-500/15', iconColor: 'text-emerald-400' },
+            { icon: Sparkles, title: t('新手专区', 'Beginner Zone'), desc: t('从零开始了解 Renaiss 生态', 'Learn Renaiss from scratch'), tab: 'beginner', color: 'text-blue-500' },
+            { icon: Shield, title: t('SBT 图鉴', 'SBT Atlas'), desc: t('30+ SBT 完整收录与分析', '30+ SBTs fully cataloged'), tab: 'sbt', color: 'text-purple-500' },
+            { icon: Zap, title: t('抽卡模拟', 'Gacha Simulator'), desc: t('模拟抽卡体验和概率分析', 'Simulate gacha experience'), tab: 'simulator', color: 'text-amber-500' },
+            { icon: BookOpen, title: t('事件中心', 'Events Hub'), desc: t('追踪 Renaiss 最新动态', 'Track latest Renaiss updates'), tab: 'events', color: 'text-emerald-500' },
           ].map((item, i) => (
             <motion.button
               key={item.tab}
               onClick={() => onNavigate(item.tab)}
-              className={`glass-card rounded-xl p-4 text-left group bg-gradient-to-br ${item.gradient} border ${item.border} hover:scale-[1.02] transition-all`}
+              className="glass-card p-5 text-left group hover:scale-[1.02] transition-all"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.08 }}
             >
-              <item.icon className={`w-6 h-6 ${item.iconColor} mb-2 opacity-70 group-hover:opacity-100 transition-opacity`} />
-              <h3 className="text-[14px] font-semibold text-white/80 mb-1">{item.title}</h3>
-              <p className="text-[11px] text-white/35">{item.desc}</p>
-              <div className="flex items-center gap-1 mt-2 text-[11px] text-white/25 group-hover:text-white/50 transition-colors">
+              <item.icon className={`w-6 h-6 ${item.color} mb-3 opacity-80 group-hover:opacity-100 transition-opacity`} />
+              <h3 className="text-sm font-semibold text-foreground mb-1">{item.title}</h3>
+              <p className="text-xs text-muted-foreground">{item.desc}</p>
+              <div className="flex items-center gap-1 mt-3 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                 {t('进入', 'Enter')} <ArrowRight className="w-3 h-3" />
               </div>
             </motion.button>
@@ -124,23 +104,24 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </div>
       </section>
 
-      {/* Stats Grid */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+      {/* Stats Grid — Real chain data */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat, i) => (
           <motion.div
             key={stat.label}
-            className="glass-card rounded-xl p-4"
+            className="stat-card"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 + i * 0.1 }}
           >
             <div className="flex items-center gap-2 mb-2">
-              <stat.icon className="w-4 h-4 text-ice-dim" />
-              <span className="text-[11px] text-white/30 uppercase tracking-wider">{stat.label}</span>
+              <stat.icon className="w-4 h-4 text-primary" />
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">{stat.label}</span>
             </div>
-            <div className="text-xl lg:text-2xl font-bold text-white/90 font-mono">
+            <div className="text-2xl lg:text-3xl font-bold text-foreground font-mono">
               <AnimatedNumber target={stat.value} prefix={stat.prefix} />{stat.suffix}
             </div>
+            <div className="text-[10px] text-muted-foreground/60 mt-1">{t('来源:', 'Source:')} {stat.source}</div>
           </motion.div>
         ))}
       </section>
@@ -148,51 +129,67 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       {/* Top Arbitrage Opportunities */}
       <section className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white/80">
+          <h2 className="text-lg font-bold text-foreground">
             {t('热门套利机会', 'Top Arbitrage Opportunities')}
           </h2>
           <button
             onClick={() => onNavigate('arbitrage')}
-            className="flex items-center gap-1 text-[12px] text-ice-dim hover:text-ice transition-colors"
+            className="flex items-center gap-1 text-sm text-primary hover:underline transition-colors"
           >
-            {t('查看全部', 'View All')} <ArrowRight className="w-3 h-3" />
+            {t('查看全部', 'View All')} <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {topDeals.map((card, i) => (
             <motion.div
               key={card.id}
-              className="glass-card rounded-xl overflow-hidden card-positive"
+              className="glass-card overflow-hidden group cursor-pointer"
+              onClick={() => onNavigate('arbitrage')}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 + i * 0.1 }}
             >
-              <div className="aspect-square bg-black/20 relative overflow-hidden">
+              {/* Card image */}
+              <div className="aspect-square bg-secondary dark:bg-[#111118] relative overflow-hidden">
                 <img
                   src={card.imgUrl}
                   alt={card.name}
-                  className="w-full h-full object-contain p-3"
+                  className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300"
                   loading="lazy"
                 />
-                <div className="absolute top-2 right-2 badge-ice px-2 py-0.5 rounded-full text-[10px] font-bold">
-                  +{card.spreadPct}%
+                {/* Grade badge */}
+                <div className="absolute top-2.5 left-2.5 badge-grade px-2 py-0.5 rounded-md text-[10px]">
+                  {card.grade}
                 </div>
-                <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/40 backdrop-blur-sm">
+                {/* Arbitrage badge */}
+                <div className="absolute top-2.5 right-2.5 badge-arb px-2.5 py-1 rounded-full text-[10px] flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  {t('套利机会', 'Arbitrage')}
+                </div>
+                {/* Live indicator */}
+                <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5 px-2 py-1 rounded-full bg-background/80 dark:bg-black/60 backdrop-blur-sm">
                   <div className="live-dot" />
-                  <span className="text-[8px] text-white/50">LIVE</span>
+                  <span className="text-[9px] text-muted-foreground">LIVE</span>
                 </div>
               </div>
-              <div className="p-3">
-                <p className="text-[11px] text-white/55 line-clamp-2 mb-2 leading-relaxed">{card.name}</p>
-                <div className="flex items-center justify-between">
+              {/* Card info */}
+              <div className="p-4">
+                <p className="text-xs font-medium text-foreground line-clamp-2 mb-3 leading-relaxed">{card.name}</p>
+                <div className="flex items-end justify-between mb-2">
                   <div>
-                    <div className="text-[10px] text-white/25">{t('挂牌价', 'Listed')}</div>
-                    <div className="text-sm font-mono font-semibold text-white/80">${card.price}</div>
+                    <div className="text-[10px] text-muted-foreground mb-0.5">{t('挂牌价', 'Listed')}</div>
+                    <div className="text-lg font-bold font-mono text-foreground">${card.price}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[10px] text-white/25">FMV</div>
-                    <div className="text-sm font-mono font-semibold text-ice">${card.fmv}</div>
+                    <div className="text-[10px] text-muted-foreground mb-0.5">{t('参考价', 'FMV')}</div>
+                    <div className="text-lg font-bold font-mono text-muted-foreground">${card.fmv}</div>
                   </div>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <span className="text-xs text-muted-foreground">{t('潜在利润', 'Potential Profit')}</span>
+                  <span className="text-sm font-bold text-green-500">
+                    +{card.spreadPct}% (${card.spread})
+                  </span>
                 </div>
               </div>
             </motion.div>
@@ -203,43 +200,43 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       {/* Recent Events */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white/80">
+          <h2 className="text-lg font-bold text-foreground">
             {t('最新动态', 'Recent Events')}
           </h2>
           <button
             onClick={() => onNavigate('events')}
-            className="flex items-center gap-1 text-[12px] text-ice-dim hover:text-ice transition-colors"
+            className="flex items-center gap-1 text-sm text-primary hover:underline transition-colors"
           >
-            {t('查看全部', 'View All')} <ArrowRight className="w-3 h-3" />
+            {t('查看全部', 'View All')} <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {recentEvents.map((evt, i) => (
             <motion.div
               key={evt.id}
-              className="glass-card rounded-xl p-4 flex items-start gap-4"
+              className="glass-card p-4 flex items-start gap-4"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.7 + i * 0.1 }}
             >
-              <div className="shrink-0 w-10 h-10 rounded-lg bg-ice/10 flex items-center justify-center">
-                <Calendar className="w-4 h-4 text-ice-dim" />
+              <div className="shrink-0 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Calendar className="w-4 h-4 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[11px] text-white/30 font-mono">{evt.date}</span>
+                  <span className="text-xs text-muted-foreground font-mono">{evt.date}</span>
                   {evt.hasSbt && (
-                    <span className="badge-violet px-1.5 py-0.5 rounded text-[9px] font-bold">SBT</span>
+                    <span className="bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 px-1.5 py-0.5 rounded text-[9px] font-bold">SBT</span>
                   )}
                 </div>
-                <h3 className="text-sm font-medium text-white/80 mb-1">{t(evt.title, evt.titleEn)}</h3>
-                <p className="text-[11px] text-white/30 line-clamp-1">{t(evt.description, evt.descriptionEn)}</p>
+                <h3 className="text-sm font-semibold text-foreground mb-1">{t(evt.title, evt.titleEn)}</h3>
+                <p className="text-xs text-muted-foreground line-clamp-1">{t(evt.description, evt.descriptionEn)}</p>
               </div>
               <a
                 href={evt.sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="shrink-0 flex items-center gap-1 text-[10px] text-white/20 hover:text-ice transition-colors"
+                className="shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
               >
                 {evt.source} <ExternalLink className="w-3 h-3" />
               </a>
