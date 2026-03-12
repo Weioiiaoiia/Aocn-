@@ -66,7 +66,7 @@ export default function Events() {
                           onClick={e => e.stopPropagation()}
                           className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] bg-secondary text-muted-foreground hover:text-primary border border-border transition-colors"
                         >
-                          <SourceIcon type={evt.sourceType} />
+                          <SourceIcon type={evt.sourceType || evt.type} />
                           {evt.source}
                           <ExternalLink className="w-2.5 h-2.5" />
                         </a>

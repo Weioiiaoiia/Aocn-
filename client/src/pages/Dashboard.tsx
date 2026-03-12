@@ -1,10 +1,10 @@
 /*
- * AOCN Dashboard — Clean light theme matching reference image 3
- * Hero with bold text + blue gradient + real chain data
+ * AOCN Dashboard — Clean light theme with live data
  */
 import { useLang } from '@/contexts/LanguageContext';
-import { ecosystemStats, arbitrageCards, timelineEvents } from '@/lib/data';
-import { TrendingUp, Users, DollarSign, Layers, Calendar, ArrowRight, ExternalLink, Sparkles, BookOpen, Shield, Zap } from 'lucide-react';
+import { ecosystemStats, timelineEvents, type Card } from '@/lib/data';
+import { fetchCards } from '@/lib/api';
+import { TrendingUp, Users, DollarSign, Layers, Calendar, ArrowRight, ExternalLink, Sparkles, BookOpen, Shield, Zap, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 
@@ -30,19 +30,36 @@ interface DashboardProps {
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
   const { t } = useLang();
-  const topDeals = arbitrageCards.slice(0, 4);
+  const [topDeals, setTopDeals] = useState<Card[]>([]);
+  const [loadingDeals, setLoadingDeals] = useState(true);
+  const [liveStats, setLiveStats] = useState(ecosystemStats);
   const recentEvents = timelineEvents.slice(-3).reverse();
 
+  useEffect(() => {
+    fetchCards({ offset: 0, limit: 4, sortBy: 'spreadPct', sortOrder: 'desc', listedOnly: true })
+      .then(resp => {
+        // Only show positive spread cards
+        const positive = resp.cards.filter(c => c.spreadPct > 0);
+        setTopDeals(positive.slice(0, 4));
+        setLiveStats(prev => ({
+          ...prev,
+          totalCards: resp.stats.totalCards,
+        }));
+      })
+      .catch(console.error)
+      .finally(() => setLoadingDeals(false));
+  }, []);
+
   const stats = [
-    { icon: Users, label: t('总用户', 'Total Users'), value: ecosystemStats.totalUsers, prefix: '', suffix: '+', source: 'Phemex / KuCoin' },
-    { icon: DollarSign, label: t('交易总额', 'Total Volume'), value: ecosystemStats.totalVolume, prefix: '$', suffix: '+', source: 'BscScan' },
-    { icon: Layers, label: t('链上藏品', 'On-chain NFTs'), value: ecosystemStats.totalCards, prefix: '', suffix: '+', source: 'BscScan' },
-    { icon: TrendingUp, label: t('NFT持有者', 'NFT Holders'), value: ecosystemStats.holders, prefix: '', suffix: '', source: 'BscScan' },
+    { icon: Users, label: t('总用户', 'Total Users'), value: liveStats.totalUsers, prefix: '', suffix: '+', source: 'Phemex / KuCoin' },
+    { icon: DollarSign, label: t('交易总额', 'Total Volume'), value: liveStats.totalVolume, prefix: '$', suffix: '+', source: 'BscScan' },
+    { icon: Layers, label: t('链上藏品', 'On-chain NFTs'), value: liveStats.totalCards, prefix: '', suffix: '+', source: 'Renaiss' },
+    { icon: TrendingUp, label: t('NFT持有者', 'NFT Holders'), value: liveStats.holders, prefix: '', suffix: '', source: 'BscScan' },
   ];
 
   return (
     <div>
-      {/* Hero Section — Clean style like reference image 3 */}
+      {/* Hero Section */}
       <section className="relative overflow-hidden rounded-2xl mb-8 bg-gradient-to-br from-secondary via-background to-secondary dark:from-[#0f0f1a] dark:via-[#0a0a0f] dark:to-[#0f0f1a]" style={{ minHeight: '360px' }}>
         <div className="relative z-10 flex flex-col items-center text-center px-6 py-16 lg:py-20">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
@@ -54,8 +71,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             </h1>
             <p className="text-muted-foreground text-base lg:text-lg max-w-2xl mx-auto mb-8 leading-relaxed">
               {t(
-                '实时监控 Renaiss Protocol 市场，自动识别低于市场价的卡片，为您提供专业的投资分析和入手建议。',
-                'Real-time monitoring of Renaiss Protocol marketplace, automatically identifying underpriced cards with professional investment analysis.'
+                `实时监控 Renaiss Protocol 全部 ${liveStats.totalCards.toLocaleString()}+ 张卡牌，自动识别低于市场价的卡片，为您提供专业的投资分析和入手建议。`,
+                `Real-time monitoring of all ${liveStats.totalCards.toLocaleString()}+ Renaiss cards, automatically identifying underpriced cards with professional investment analysis.`
               )}
             </p>
             <div className="flex flex-wrap gap-3 justify-center">
@@ -81,7 +98,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { icon: Sparkles, title: t('新手专区', 'Beginner Zone'), desc: t('从零开始了解 Renaiss 生态', 'Learn Renaiss from scratch'), tab: 'beginner', color: 'text-blue-500' },
-            { icon: Shield, title: t('SBT 图鉴', 'SBT Atlas'), desc: t('30+ SBT 完整收录与分析', '30+ SBTs fully cataloged'), tab: 'sbt', color: 'text-purple-500' },
+            { icon: Shield, title: t('SBT 图鉴', 'SBT Atlas'), desc: t('SBT 完整收录与分析', 'SBTs fully cataloged'), tab: 'sbt', color: 'text-purple-500' },
             { icon: Zap, title: t('抽卡模拟', 'Gacha Simulator'), desc: t('模拟抽卡体验和概率分析', 'Simulate gacha experience'), tab: 'simulator', color: 'text-amber-500' },
             { icon: BookOpen, title: t('事件中心', 'Events Hub'), desc: t('追踪 Renaiss 最新动态', 'Track latest Renaiss updates'), tab: 'events', color: 'text-emerald-500' },
           ].map((item, i) => (
@@ -104,7 +121,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </div>
       </section>
 
-      {/* Stats Grid — Real chain data */}
+      {/* Stats Grid */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat, i) => (
           <motion.div
@@ -139,62 +156,69 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             {t('查看全部', 'View All')} <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {topDeals.map((card, i) => (
-            <motion.div
-              key={card.id}
-              className="glass-card overflow-hidden group cursor-pointer"
-              onClick={() => onNavigate('arbitrage')}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 + i * 0.1 }}
-            >
-              {/* Card image */}
-              <div className="aspect-square bg-secondary dark:bg-[#111118] relative overflow-hidden">
-                <img
-                  src={card.imgUrl}
-                  alt={card.name}
-                  className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300"
-                  loading="lazy"
-                />
-                {/* Grade badge */}
-                <div className="absolute top-2.5 left-2.5 badge-grade px-2 py-0.5 rounded-md text-[10px]">
-                  {card.grade}
-                </div>
-                {/* Arbitrage badge */}
-                <div className="absolute top-2.5 right-2.5 badge-arb px-2.5 py-1 rounded-full text-[10px] flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" />
-                  {t('套利机会', 'Arbitrage')}
-                </div>
-                {/* Live indicator */}
-                <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5 px-2 py-1 rounded-full bg-background/80 dark:bg-black/60 backdrop-blur-sm">
-                  <div className="live-dot" />
-                  <span className="text-[9px] text-muted-foreground">LIVE</span>
-                </div>
-              </div>
-              {/* Card info */}
-              <div className="p-4">
-                <p className="text-xs font-medium text-foreground line-clamp-2 mb-3 leading-relaxed">{card.name}</p>
-                <div className="flex items-end justify-between mb-2">
-                  <div>
-                    <div className="text-[10px] text-muted-foreground mb-0.5">{t('挂牌价', 'Listed')}</div>
-                    <div className="text-lg font-bold font-mono text-foreground">${card.price}</div>
+
+        {loadingDeals ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 text-primary animate-spin" />
+            <span className="ml-2 text-sm text-muted-foreground">{t('加载中...', 'Loading...')}</span>
+          </div>
+        ) : topDeals.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {topDeals.map((card, i) => (
+              <motion.div
+                key={card.id}
+                className="glass-card overflow-hidden group cursor-pointer"
+                onClick={() => onNavigate('arbitrage')}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 + i * 0.1 }}
+              >
+                <div className="aspect-square bg-secondary dark:bg-[#111118] relative overflow-hidden">
+                  <img
+                    src={card.imgUrl}
+                    alt={card.name}
+                    className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                  <div className="absolute top-2.5 left-2.5 badge-grade px-2 py-0.5 rounded-md text-[10px]">
+                    {card.grade}
                   </div>
-                  <div className="text-right">
-                    <div className="text-[10px] text-muted-foreground mb-0.5">{t('参考价', 'FMV')}</div>
-                    <div className="text-lg font-bold font-mono text-muted-foreground">${card.fmv}</div>
+                  <div className="absolute top-2.5 right-2.5 badge-arb px-2.5 py-1 rounded-full text-[10px] flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    {t('套利', 'Arb')}
+                  </div>
+                  <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5 px-2 py-1 rounded-full bg-background/80 dark:bg-black/60 backdrop-blur-sm">
+                    <div className="live-dot" />
+                    <span className="text-[9px] text-muted-foreground">LIVE</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between pt-2 border-t border-border">
-                  <span className="text-xs text-muted-foreground">{t('潜在利润', 'Potential Profit')}</span>
-                  <span className="text-sm font-bold text-green-500">
-                    +{card.spreadPct}% (${card.spread})
-                  </span>
+                <div className="p-4">
+                  <p className="text-xs font-medium text-foreground line-clamp-2 mb-3 leading-relaxed">{card.name}</p>
+                  <div className="flex items-end justify-between mb-2">
+                    <div>
+                      <div className="text-[10px] text-muted-foreground mb-0.5">{t('挂牌价', 'Listed')}</div>
+                      <div className="text-lg font-bold font-mono text-foreground">${card.price.toFixed(2)}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] text-muted-foreground mb-0.5">{t('参考价', 'FMV')}</div>
+                      <div className="text-lg font-bold font-mono text-muted-foreground">${card.fmv.toFixed(2)}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <span className="text-xs text-muted-foreground">{t('潜在利润', 'Profit')}</span>
+                    <span className="text-sm font-bold text-green-500">
+                      +{card.spreadPct}% (${card.spread.toFixed(2)})
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-sm text-muted-foreground">
+            {t('暂无套利机会数据', 'No arbitrage data available yet')}
+          </div>
+        )}
       </section>
 
       {/* Recent Events */}

@@ -170,7 +170,7 @@ export default function SbtAnalysis() {
                     <div className="flex-1 min-w-0">
                       <h3 className="text-[13px] font-medium text-foreground truncate">{t(sbt.name, sbt.nameEn)}</h3>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <StatusBadge label={sbt.availableLabel} />
+                        <StatusBadge label={(sbt.availableLabel || sbt.status) as '✅' | '❌' | '⭕'} />
                         <span className="text-[10px] text-muted-foreground">{t(categoryLabels[sbt.category].zh, categoryLabels[sbt.category].en)}</span>
                       </div>
                     </div>
@@ -201,7 +201,7 @@ export default function SbtAnalysis() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-1">
                           <h2 className="text-lg font-bold text-foreground">{t(selectedCatalog.name, selectedCatalog.nameEn)}</h2>
-                          <StatusBadge label={selectedCatalog.availableLabel} />
+                          <StatusBadge label={(selectedCatalog.availableLabel || selectedCatalog.status) as '✅' | '❌' | '⭕'} />
                         </div>
                         <p className="text-xs text-muted-foreground">{t(selectedCatalog.description, selectedCatalog.descriptionEn)}</p>
                       </div>
@@ -213,7 +213,7 @@ export default function SbtAnalysis() {
                           <Award className={`w-4 h-4 ${selectedCatalog.available ? 'text-emerald-500' : 'text-muted-foreground'}`} />
                           <h4 className="text-xs font-semibold text-foreground/70">{t('获取方式', 'How to Earn')}</h4>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">{t(selectedCatalog.howToGet, selectedCatalog.howToGetEn)}</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{t(selectedCatalog.howToGet || '', selectedCatalog.howToGetEn || '')}</p>
                       </div>
 
                       <div className="rounded-lg bg-secondary dark:bg-white/[0.02] border border-border p-4">
@@ -316,7 +316,7 @@ export default function SbtAnalysis() {
                         <Shield className="w-4 h-4 text-purple-500" />
                         <h4 className="text-xs font-semibold text-purple-600 dark:text-purple-400">{t('为什么颁发（深度分析）', 'Why Awarded (Deep Analysis)')}</h4>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{t(selectedDeep.whyAwarded, selectedDeep.whyAwardedEn)}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{t(selectedDeep.whyAwarded || '', selectedDeep.whyAwardedEn || '')}</p>
                     </div>
 
                     <div className="rounded-lg bg-secondary dark:bg-white/[0.02] border border-border p-4">
@@ -324,7 +324,7 @@ export default function SbtAnalysis() {
                         <Gift className="w-4 h-4 text-amber-500" />
                         <h4 className="text-xs font-semibold text-foreground/70">{t('持有权益', 'Holder Benefits')}</h4>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{t(selectedDeep.benefits, selectedDeep.benefitsEn)}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{t(selectedDeep.benefits || '', selectedDeep.benefitsEn || '')}</p>
                     </div>
 
                     {(() => {

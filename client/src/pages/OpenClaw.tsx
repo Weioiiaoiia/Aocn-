@@ -83,7 +83,7 @@ async def scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("📊 当前没有发现套利机会")
         return
     for opp in opportunities[:5]:
-        text = f"🎴 *{opp['name']}*\\n💰 ${opp['price']} → FMV ${opp['fmv']}\\n📈 +{opp['spread_pct']}%"
+        text = f"🎴 *{opp['name']}*\\n💰 $" + "{opp['price']}" + " → FMV $" + "{opp['fmv']}" + "\\n📈 +{opp['spread_pct']}%"
         await update.message.reply_text(text, parse_mode="Markdown")
 
 def main():

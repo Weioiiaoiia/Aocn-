@@ -38,7 +38,7 @@ export default function Simulator() {
         if (roll <= cumulative) {
           const variance = 0.7 + Math.random() * 0.6;
           const cardValue = +(tier.avgValue * variance).toFixed(2);
-          newResults.push({ tier: tier.tier, value: cardValue, profit: +(cardValue - selectedPack.price).toFixed(2) });
+          newResults.push({ tier: String(tier.tier), value: cardValue, profit: +(cardValue - selectedPack.price).toFixed(2) });
           spent += selectedPack.price;
           value += cardValue;
           break;
@@ -63,7 +63,7 @@ export default function Simulator() {
   };
   const autoFillFromMarket = () => {
     const items = arbitrageCards.slice(0, 5).map(c => ({
-      name: c.pokemonName || c.name.split('#').pop()?.trim() || c.name,
+      name: c.name.split('#').pop()?.trim() || c.name,
       quantity: 1,
       currentPrice: c.fmv,
     }));
