@@ -12,6 +12,7 @@ import SbtAnalysis from '@/pages/SbtAnalysis';
 import Simulator from '@/pages/Simulator';
 import OpenClaw from '@/pages/OpenClaw';
 import Hackathon from '@/pages/Hackathon';
+import BeginnerGuide from '@/pages/BeginnerGuide';
 import { ArrowUp } from 'lucide-react';
 
 export default function Home() {
@@ -32,6 +33,7 @@ export default function Home() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard onNavigate={handleTabChange} />;
+      case 'beginner': return <BeginnerGuide />;
       case 'arbitrage': return <Arbitrage />;
       case 'events': return <Events />;
       case 'sbt': return <SbtAnalysis />;

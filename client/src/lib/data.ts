@@ -2,6 +2,7 @@
 // AOCN - 100% 真实数据
 // 所有卡牌数据来自 Renaiss Protocol 市场 (renaiss.xyz/marketplace)
 // 所有事件数据来自官方推特和公开新闻源
+// SBT 数据来自官方文档，持续更新
 // ============================================================
 
 export interface Card {
@@ -50,9 +51,22 @@ export interface SbtItem {
   relatedEventId: string;
 }
 
+// New: Full SBT catalog from Google Docs
+export interface SbtCatalogItem {
+  id: string;
+  name: string;
+  nameEn: string;
+  available: boolean; // ✅ = true, ❌ = false, ⭕ = special
+  availableLabel: '✅' | '❌' | '⭕';
+  description: string;
+  descriptionEn: string;
+  howToGet: string;
+  howToGetEn: string;
+  category: 'community' | 'gacha' | 'event' | 'trading' | 'social' | 'special';
+}
+
 // Helper: build eBay search URL from card name
 function buildEbayUrl(name: string): string {
-  // Extract key info for precise eBay matching
   const searchTerms = name
     .replace(/Gem Mint|NM-MT|Mint/g, '')
     .replace(/\s+/g, ' ')
@@ -68,10 +82,8 @@ function parseCardName(name: string): { grade: string; year: string; set: string
   const year = yearMatch ? yearMatch[0] : '';
   const numberMatch = name.match(/#(\S+)/);
   const cardNumber = numberMatch ? numberMatch[1] : '';
-  // Pokemon name is usually the last word(s)
   const parts = name.split('#');
   const pokemonName = parts.length > 1 ? parts[1].replace(/^\S+\s*/, '').trim() : '';
-  // Set name
   const setMatch = name.match(/Pokemon\s+(?:Japanese\s+)?(.+?)(?:\s+#)/);
   const set = setMatch ? setMatch[1] : '';
   return { grade, year, set, cardNumber, pokemonName };
@@ -172,7 +184,7 @@ export const timelineEvents: TimelineEvent[] = [
   },
   {
     id: 'evt-5', date: '2026-02-11',
-    title: 'Gacha V2 Beta上线 (日交易$700K)', titleEn: 'Gacha V2 Beta Launch ($700K/day)',
+    title: 'Gacha V2 Beta上线 (日交易$700K)', titleEn: 'Gacha V2 Beta Launch ($700K Daily Volume)',
     description: 'Gacha V2 Beta版本上线，首日交易量达到$700K，用户可以通过抽卡获得真实PSA评级卡牌。',
     descriptionEn: 'Gacha V2 Beta launches with $700K first-day volume. Users can pull real PSA-graded cards through gacha mechanism.',
     source: 'GlobeNewswire', sourceUrl: 'https://www.globenewswire.com', sourceType: 'news', hasSbt: false
@@ -225,6 +237,7 @@ export const timelineEvents: TimelineEvent[] = [
   },
 ];
 
+// Legacy SBT items (for deep analysis view)
 export const sbtItems: SbtItem[] = [
   {
     id: 'sbt-1', name: 'Alpha测试者SBT', nameEn: 'Alpha Tester SBT',
@@ -239,8 +252,8 @@ export const sbtItems: SbtItem[] = [
     id: 'sbt-2', name: '社区领袖SBT', nameEn: 'Community Leader SBT',
     description: '颁发给在Renaiss社区中做出突出贡献的领袖人物。', descriptionEn: 'Awarded to outstanding leaders who contribute significantly to the Renaiss community.',
     howToGet: '通过持续的社区贡献（内容创作、社区管理、技术支持等）获得官方认可。', howToGetEn: 'Earn official recognition through sustained community contributions (content creation, community management, technical support, etc.).',
-    whyAwarded: '社区是去中心化协议的核心驱动力。社区领袖SBT识别并奖励那些主动推动生态发展的人，他们通过教育新用户、组织活动、创建内容等方式为Renaiss创造了不可替代的价值。这种不可转让的身份认证确保了领袖地位的真实性。',
-    whyAwardedEn: 'Community is the core driving force of decentralized protocols. The Community Leader SBT identifies and rewards those who actively drive ecosystem growth through educating new users, organizing events, creating content, etc.',
+    whyAwarded: '社区是去中心化协议的核心驱动力。社区领袖SBT识别并奖励那些主动推动生态发展的人，他们通过教育新用户、组织活动、创建内容等方式为Renaiss创造了不可替代的价值。',
+    whyAwardedEn: 'Community is the core driving force of decentralized protocols. The Community Leader SBT identifies and rewards those who actively drive ecosystem growth.',
     benefits: '专属Discord频道、提前获取新功能、官方合作机会、额外SBT空投。', benefitsEn: 'Exclusive Discord channel, early access to new features, official partnership opportunities, additional SBT airdrops.',
     relatedEventId: 'evt-4'
   },
@@ -248,8 +261,8 @@ export const sbtItems: SbtItem[] = [
     id: 'sbt-3', name: 'Consensus参会者SBT', nameEn: 'Consensus Attendee SBT',
     description: '颁发给参加Consensus Hong Kong 2026 Renaiss展位的用户。', descriptionEn: 'Awarded to users who visited the Renaiss booth at Consensus Hong Kong 2026.',
     howToGet: '亲临Consensus Hong Kong 2026现场，访问Renaiss展位并完成签到。', howToGetEn: 'Visit the Renaiss booth at Consensus Hong Kong 2026 in person and complete check-in.',
-    whyAwarded: '线下活动是Web3项目建立真实社区连接的关键。Consensus是全球最大的区块链峰会之一，Renaiss在此展示了价值$15M+的实物藏品。参会者SBT记录了这一历史性时刻的见证者身份，同时也是Renaiss从线上走向线下的重要里程碑。',
-    whyAwardedEn: 'Offline events are key to building real community connections in Web3. Consensus is one of the largest blockchain summits globally. The Attendee SBT records witness identity of this historic moment.',
+    whyAwarded: '线下活动是Web3项目建立真实社区连接的关键。Consensus是全球最大的区块链峰会之一，参会者SBT记录了这一历史性时刻的见证者身份。',
+    whyAwardedEn: 'Offline events are key to building real community connections in Web3. The Attendee SBT records witness identity of this historic moment.',
     benefits: '限定版数字藏品、线下活动优先参与权。', benefitsEn: 'Limited edition digital collectibles, priority access to offline events.',
     relatedEventId: 'evt-6'
   },
@@ -257,8 +270,8 @@ export const sbtItems: SbtItem[] = [
     id: 'sbt-4', name: '农历新年限定SBT', nameEn: 'Lunar New Year Limited SBT',
     description: '2026农历新年BNB Chain x Renaiss联合活动限定SBT。', descriptionEn: '2026 Lunar New Year BNB Chain x Renaiss joint event limited SBT.',
     howToGet: '参与BNB Chain x Renaiss农历新年联合活动，完成指定任务。', howToGetEn: 'Participate in the BNB Chain x Renaiss Lunar New Year joint event and complete designated tasks.',
-    whyAwarded: '这是BNB Chain生态与Renaiss的首次大型联合活动，标志着Renaiss获得了BNB Chain官方的深度认可。限定SBT不仅是参与证明，更代表了用户在Renaiss生态早期发展中的重要角色。节日主题的SBT也增加了收藏价值和社区归属感。',
-    whyAwardedEn: 'This was the first major joint event between BNB Chain ecosystem and Renaiss, marking deep official recognition. The limited SBT represents users\' important role in early ecosystem development.',
+    whyAwarded: '这是BNB Chain生态与Renaiss的首次大型联合活动，标志着Renaiss获得了BNB Chain官方的深度认可。',
+    whyAwardedEn: 'This was the first major joint event between BNB Chain ecosystem and Renaiss, marking deep official recognition.',
     benefits: '限定卡包折扣、社区专属标识。', benefitsEn: 'Limited card pack discounts, exclusive community badge.',
     relatedEventId: 'evt-7'
   },
@@ -266,8 +279,8 @@ export const sbtItems: SbtItem[] = [
     id: 'sbt-5', name: '30周年纪念SBT', nameEn: '30th Anniversary SBT',
     description: '宝可梦30周年纪念卡包购买者专属SBT。', descriptionEn: 'Exclusive SBT for Pokemon 30th Anniversary card pack purchasers.',
     howToGet: '在38分钟售罄窗口内成功购买宝可梦30周年纪念卡包。', howToGetEn: 'Successfully purchase Pokemon 30th Anniversary card packs within the 38-minute sellout window.',
-    whyAwarded: '宝可梦30周年是收藏界的重大事件。Renaiss的纪念卡包在38分钟内售罄，证明了平台的市场号召力。获得此SBT的用户不仅展示了快速决策能力，也证明了他们对Renaiss平台的高度信任。这种稀缺性使得该SBT成为最有价值的身份标识之一。',
-    whyAwardedEn: 'Pokemon 30th Anniversary is a major event in the collectibles world. The 38-minute sellout proved platform market appeal. This SBT is one of the most valuable identity markers due to its scarcity.',
+    whyAwarded: '宝可梦30周年是收藏界的重大事件。Renaiss的纪念卡包在38分钟内售罄，证明了平台的市场号召力。',
+    whyAwardedEn: 'Pokemon 30th Anniversary is a major event in the collectibles world. The 38-minute sellout proved platform market appeal.',
     benefits: '未来纪念卡包优先购买权、独家收藏品空投。', benefitsEn: 'Priority purchase rights for future anniversary packs, exclusive collectible airdrops.',
     relatedEventId: 'evt-8'
   },
@@ -275,11 +288,55 @@ export const sbtItems: SbtItem[] = [
     id: 'sbt-6', name: 'Ambassador SBT', nameEn: 'Ambassador SBT',
     description: 'Renaiss官方大使计划2.0的身份认证SBT。', descriptionEn: 'Identity verification SBT for Renaiss Official Ambassador Program 2.0.',
     howToGet: '通过Ambassador Program 2.0的申请和审核流程，成为官方认证大使。', howToGetEn: 'Complete the Ambassador Program 2.0 application and review process to become an officially certified ambassador.',
-    whyAwarded: 'Ambassador Program 2.0是Renaiss社区建设的核心战略。大使们承担着在各地区推广Renaiss、组织本地活动、翻译内容和招募新用户的重要职责。Ambassador SBT是对这些持续贡献的正式认可，也是Renaiss去中心化社区治理的重要组成部分。',
-    whyAwardedEn: 'Ambassador Program 2.0 is a core strategy for Renaiss community building. Ambassadors take on important responsibilities including regional promotion, organizing local events, translating content, and recruiting new users.',
+    whyAwarded: 'Ambassador Program 2.0是Renaiss社区建设的核心战略。大使们承担着推广、组织活动、翻译内容和招募新用户的重要职责。',
+    whyAwardedEn: 'Ambassador Program 2.0 is a core strategy for Renaiss community building with important responsibilities.',
     benefits: '月度奖励、专属Merch、优先测试新功能、社区治理权重加成。', benefitsEn: 'Monthly rewards, exclusive merch, priority access to new features, enhanced community governance weight.',
     relatedEventId: 'evt-11'
   },
+];
+
+// ============================================================
+// Full SBT Catalog — from Google Docs (30+ SBTs)
+// ============================================================
+export const sbtCatalog: SbtCatalogItem[] = [
+  // ─── Currently Available (✅) ───
+  { id: 'cat-1', name: 'Discord Server Booster', nameEn: 'Discord Server Booster', available: true, availableLabel: '✅', description: '此徽章授予通过提升服务器性能来支持Renaiss Discord的用户', descriptionEn: 'Awarded to users who support the Renaiss Discord by boosting the server', howToGet: '至少提升一次Renaiss Discord服务器的优先级', howToGetEn: 'Boost the Renaiss Discord server at least once', category: 'social' },
+  { id: 'cat-2', name: 'Community Developer', nameEn: 'Community Developer', available: true, availableLabel: '✅', description: '此徽章授予为Renaiss构建应用程序、工具或AI系统的开发者', descriptionEn: 'Awarded to developers who build apps, tools, or AI systems for Renaiss', howToGet: '开发并提交支持Renaiss的应用程序、工具或AI系统', howToGetEn: 'Develop and submit an app, tool, or AI system supporting Renaiss', category: 'community' },
+  { id: 'cat-3', name: 'Community Voice', nameEn: 'Community Voice', available: true, availableLabel: '✅', description: '奖励给在X+Discord上传播知识、创作内容并积极参与引导新人的用户', descriptionEn: 'Rewards users who spread knowledge, create content, and actively guide newcomers on X+Discord', howToGet: '加入DC一个月内发布8篇Renaiss相关的高质量推文，获得社区等级3', howToGetEn: 'Post 8 high-quality Renaiss-related tweets within one month of joining DC, reach Community Level 3', category: 'community' },
+  { id: 'cat-4', name: 'S+ Breaker', nameEn: 'S+ Breaker', available: true, availableLabel: '✅', description: '此徽章颁发给在Renaiss平台成功抽取到顶级或S级卡牌的收藏家', descriptionEn: 'Awarded to collectors who successfully pull a top-tier or S-grade card on Renaiss', howToGet: '在Renaiss上从任何符合条件的卡包中至少抽取一张顶级或S级卡牌', howToGetEn: 'Pull at least one top-tier or S-grade card from any eligible pack on Renaiss', category: 'gacha' },
+  { id: 'cat-5', name: 'Discord Linker', nameEn: 'Discord Linker', available: true, availableLabel: '✅', description: '奖励给连接Discord账号的用户', descriptionEn: 'Rewards users who link their Discord account', howToGet: '链接Discord账号', howToGetEn: 'Link your Discord account', category: 'social' },
+  { id: 'cat-6', name: 'Fund Your Account', nameEn: 'Fund Your Account', available: true, availableLabel: '✅', description: '奖励给首次充值并开始全面参与Renaiss生态系统的用户', descriptionEn: 'Rewards users who make their first deposit and start fully participating in the Renaiss ecosystem', howToGet: '在过去3天内完成单笔60 USDT或以上的存款', howToGetEn: 'Complete a single deposit of 60 USDT or more within the past 3 days', category: 'trading' },
+  { id: 'cat-7', name: 'Pack Opener', nameEn: 'Pack Opener', available: true, availableLabel: '✅', description: '奖励给持续参与开包、发现新卡牌并推动生态系统发展的用户', descriptionEn: 'Rewards users who consistently open packs, discover new cards, and drive ecosystem growth', howToGet: '执行5次卡包拆封', howToGetEn: 'Open 5 card packs', category: 'gacha' },
+  { id: 'cat-8', name: 'Signal Booster', nameEn: 'Signal Booster', available: true, availableLabel: '✅', description: '此徽章授予那些评论有力地支持并深化了创始人声音的社区成员', descriptionEn: 'Awarded to community members whose comments powerfully support and amplify the founder\'s voice', howToGet: '积极与官网&创始人推文互动，发表杰出评论，有几率获得', howToGetEn: 'Actively interact with official & founder tweets, post outstanding comments for a chance to earn', category: 'social' },
+  { id: 'cat-9', name: 'The Recruiter', nameEn: 'The Recruiter', available: true, availableLabel: '✅', description: '奖励给通过招募新玩家帮助扩大Renaiss社区的用户', descriptionEn: 'Rewards users who help expand the Renaiss community by recruiting new players', howToGet: '成功邀请5位或更多新用户', howToGetEn: 'Successfully invite 5 or more new users', category: 'community' },
+  { id: 'cat-10', name: 'The Trader', nameEn: 'The Trader', available: true, availableLabel: '✅', description: '此荣誉颁发给积极通过持续交易为市场流动性做出贡献的用户', descriptionEn: 'Awarded to users who actively contribute to market liquidity through consistent trading', howToGet: '完成3笔或以上有效交易', howToGetEn: 'Complete 3 or more valid trades', category: 'trading' },
+  { id: 'cat-11', name: 'X Linker', nameEn: 'X Linker', available: true, availableLabel: '✅', description: '奖励给关联其Twitter账户的用户', descriptionEn: 'Rewards users who link their Twitter account', howToGet: '链接推特账号', howToGetEn: 'Link your Twitter/X account', category: 'social' },
+  { id: 'cat-12', name: 'Grand Ripper', nameEn: 'Grand Ripper', available: true, availableLabel: '✅', description: '授予那些在拆封方面表现出极高热情的用户——他们的热情几乎超越了生态系统中的其他所有人', descriptionEn: 'Awarded to users who show extreme enthusiasm for pack opening — surpassing almost everyone else in the ecosystem', howToGet: '完成200次或以上的包装开箱', howToGetEn: 'Complete 200 or more pack openings', category: 'gacha' },
+
+  // ─── Special (⭕) ───
+  { id: 'cat-13', name: 'The Vanguard', nameEn: 'The Vanguard', available: false, availableLabel: '⭕', description: '该奖项授予自Renaiss生态系统创立之初就对其产生深远影响的资深且具有影响力的品牌大使', descriptionEn: 'Awarded to veteran and influential brand ambassadors who have had a profound impact since the founding of the Renaiss ecosystem', howToGet: '早期支持者展现出最高的影响力，加入Renaiss大使', howToGetEn: 'Early supporters demonstrating the highest influence, join Renaiss ambassadors', category: 'special' },
+
+  // ─── Not Currently Available (❌) ───
+  { id: 'cat-14', name: '新年限定SBT', nameEn: 'Lunar New Year SBT', available: false, availableLabel: '❌', description: '新年活动限定SBT，参与官推发布的活动，连续签到5天即可解锁隐藏财神爷SBT', descriptionEn: 'Lunar New Year event limited SBT, participate in official activities, check in for 5 consecutive days to unlock hidden Fortune God SBT', howToGet: '参与官推发布的活动，连续签到5天', howToGetEn: 'Participate in official activities, check in for 5 consecutive days', category: 'event' },
+  { id: 'cat-15', name: 'Hong Kong Explorer SBT', nameEn: 'Hong Kong Explorer SBT', available: false, availableLabel: '❌', description: '在Consensus Hong Kong期间捕捉到Renaiss CEO', descriptionEn: 'Capture the Renaiss CEO during Consensus Hong Kong', howToGet: '在Consensus Hong Kong期间捕捉到Renaiss CEO', howToGetEn: 'Find and meet the Renaiss CEO during Consensus Hong Kong', category: 'event' },
+  { id: 'cat-16', name: 'Infinite Flash Mint', nameEn: 'Infinite Flash Mint', available: false, availableLabel: '❌', description: '此徽章颁发给在无限扭蛋Beta测试上线后15分钟内进入游戏的用户', descriptionEn: 'Awarded to users who entered the game within 15 minutes of Infinite Gacha Beta launch', howToGet: '在无限扭蛋测试版上线后的前15分钟内购买卡包', howToGetEn: 'Purchase a card pack within the first 15 minutes of Infinite Gacha Beta launch', category: 'gacha' },
+  { id: 'cat-17', name: 'Infinite Grinder', nameEn: 'Infinite Grinder', available: false, availableLabel: '❌', description: '此徽章颁发给积极参与无限扭蛋测试版并多次开启卡包的用户', descriptionEn: 'Awarded to users who actively participated in Infinite Gacha Beta and opened multiple packs', howToGet: '在无限扭蛋测试期间开启5个或更多卡包', howToGetEn: 'Open 5 or more packs during the Infinite Gacha Beta test', category: 'gacha' },
+  { id: 'cat-18', name: 'Infinite Pioneer', nameEn: 'Infinite Pioneer', available: false, availableLabel: '❌', description: '奖励给参与无限扭蛋测试版并开启首个卡包的用户', descriptionEn: 'Rewards users who participated in Infinite Gacha Beta and opened their first pack', howToGet: '在无限扭蛋测试期间至少打开1个卡包', howToGetEn: 'Open at least 1 pack during the Infinite Gacha Beta test', category: 'gacha' },
+  { id: 'cat-19', name: 'Legacy Flash Mint', nameEn: 'Legacy Flash Mint', available: false, availableLabel: '❌', description: '此徽章授予在Legacy Pack 3.0上线后一分钟内进入游戏的用户', descriptionEn: 'Awarded to users who entered the game within one minute of Legacy Pack 3.0 launch', howToGet: '在Legacy 3.0礼包上线后的第一分钟内购买卡包', howToGetEn: 'Purchase a pack within the first minute of Legacy Pack 3.0 launch', category: 'gacha' },
+  { id: 'cat-20', name: 'Legacy Triple Pull', nameEn: 'Legacy Triple Pull', available: false, availableLabel: '❌', description: '奖励给在活动期间成功完成三次抽奖的用户', descriptionEn: 'Rewards users who successfully completed three pulls during the event', howToGet: '在传承卡包3.0中打开3个卡包', howToGetEn: 'Open 3 packs in Legacy Pack 3.0', category: 'gacha' },
+  { id: 'cat-21', name: 'Live Participant', nameEn: 'Live Participant', available: false, availableLabel: '❌', description: '授予参加1月26日Renaiss Discord AMA的用户', descriptionEn: 'Awarded to users who attended the January 26 Renaiss Discord AMA', howToGet: '参加1月26日在Renaiss Discord上举行的AMA活动', howToGetEn: 'Attend the AMA held on Renaiss Discord on January 26', category: 'event' },
+  { id: 'cat-22', name: 'Infinite Cursed', nameEn: 'Infinite Cursed', available: false, availableLabel: '❌', description: '此徽章颁发给无限扭蛋测试版期间净亏损最高的5位用户', descriptionEn: 'Awarded to the 5 users with the highest net loss during Infinite Gacha Beta', howToGet: '在无限扭蛋测试版中净亏损排名前5', howToGetEn: 'Rank in the top 5 for net loss during Infinite Gacha Beta', category: 'gacha' },
+  { id: 'cat-23', name: 'Infinite Flex', nameEn: 'Infinite Flex', available: false, availableLabel: '❌', description: '此徽章颁发给在无限扭蛋测试版期间抽到1张S级卡牌并公开展示的用户', descriptionEn: 'Awarded to users who pulled an S-grade card during Infinite Gacha Beta and publicly showcased it', howToGet: '无限扭蛋测试版期间抽取一张S级卡牌，并在X上分享', howToGetEn: 'Pull an S-grade card during Infinite Gacha Beta and share on X', category: 'gacha' },
+  { id: 'cat-24', name: 'Refs SBT', nameEn: 'Refs SBT', available: false, availableLabel: '❌', description: '生态系统SBT，活动已于2月5日结束', descriptionEn: 'Ecosystem SBT, event ended on February 5', howToGet: '用已绑定Renaiss的X账号注册Refs并关注@whatsyourrefs', howToGetEn: 'Register on Refs with your Renaiss-linked X account and follow @whatsyourrefs', category: 'social' },
+  { id: 'cat-25', name: 'Early Bird', nameEn: 'Early Bird', available: false, availableLabel: '❌', description: '授予在Alpha阶段加入Renaiss的最早一批探险家', descriptionEn: 'Awarded to the earliest explorers who joined Renaiss during the Alpha phase', howToGet: '在Alpha测试期间至少登录一次', howToGetEn: 'Log in at least once during the Alpha test', category: 'event' },
+  { id: 'cat-26', name: 'Beta Pioneer', nameEn: 'Beta Pioneer', available: false, availableLabel: '❌', description: '奖励给在Renaiss封闭测试期间登录一次支持我们的用户', descriptionEn: 'Rewards users who logged in once during the Renaiss closed beta to support us', howToGet: '在封闭测试期间登录一次', howToGetEn: 'Log in once during the closed beta', category: 'event' },
+  { id: 'cat-27', name: 'Christmas Carol', nameEn: 'Christmas Carol', available: false, availableLabel: '❌', description: '此徽章颁发给积极参与圣诞节活动、分享Renaiss节日内容的社区成员', descriptionEn: 'Awarded to community members who actively participated in Christmas events and shared Renaiss holiday content', howToGet: '在圣诞节促销活动期间，至少发布一篇与Renaiss相关的圣诞节推文', howToGetEn: 'Post at least one Renaiss-related Christmas tweet during the Christmas promotion', category: 'event' },
+  { id: 'cat-28', name: 'Heat Survivor', nameEn: 'Heat Survivor', available: false, availableLabel: '❌', description: '此徽章颁发给在2026年产品高峰期参与的用户', descriptionEn: 'Awarded to users who participated during the 2026 product peak period', howToGet: '在2026年包装上市期间，至少打开1包', howToGetEn: 'Open at least 1 pack during the 2026 pack launch period', category: 'gacha' },
+  { id: 'cat-29', name: 'Identity Flexer', nameEn: 'Identity Flexer', available: false, availableLabel: '❌', description: '此徽章授予通过经批准的UGC活动展示其renaiss.xyz个人资料的用户', descriptionEn: 'Awarded to users who showcase their renaiss.xyz profile through approved UGC campaigns', howToGet: '参与"展示你的个人资料"UGC活动', howToGetEn: 'Participate in the "Show Your Profile" UGC campaign', category: 'social' },
+  { id: 'cat-30', name: 'Ice Breaker', nameEn: 'Ice Breaker', available: false, availableLabel: '❌', description: '此徽章颁发给那些无惧严寒、坚持拆封冰冻包装的收藏家', descriptionEn: 'Awarded to collectors who brave the cold and open frozen packs', howToGet: '打开5个或更多冷冻包装', howToGetEn: 'Open 5 or more frozen packs', category: 'gacha' },
+  { id: 'cat-31', name: 'New Year Opener', nameEn: 'New Year Opener', available: false, availableLabel: '❌', description: '此徽章颁发给已于2026年礼包的用户', descriptionEn: 'Awarded to users who participated in the 2026 pack event', howToGet: '完成5次2026卡包的开启，或在卡包上线后的前20小时内达成超过$100的市场交易额', howToGetEn: 'Open 5 2026 packs, or achieve over $100 in market trades within 20 hours of pack launch', category: 'gacha' },
+  { id: 'cat-32', name: 'Sprint Challenger', nameEn: 'Sprint Challenger', available: false, availableLabel: '❌', description: '奖励给参与限时Sprint套餐活动并帮助促成售罄的用户', descriptionEn: 'Rewards users who participated in the limited-time Sprint pack event and helped achieve sellout', howToGet: '在Sprint活动期间或Sprint活动包售罄时，打开至少1个Sprint活动包', howToGetEn: 'Open at least 1 Sprint pack during the Sprint event or when Sprint packs sell out', category: 'gacha' },
+  { id: 'cat-33', name: 'The Survivor', nameEn: 'The Survivor', available: false, availableLabel: '❌', description: '奖励给在Pack 4.0回购钱包耗尽期间活跃的用户', descriptionEn: 'Rewards users who were active during the Pack 4.0 buyback wallet depletion period', howToGet: '在Pack 4.0期间打开至少1个卡包，或在公告发布前24小时内完成至少1笔交易', howToGetEn: 'Open at least 1 pack during Pack 4.0, or complete at least 1 trade within 24 hours before the announcement', category: 'gacha' },
 ];
 
 // Gacha pack data

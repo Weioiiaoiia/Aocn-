@@ -1,10 +1,10 @@
 /*
  * AOCN Dashboard — Ice Blue + Violet
- * Hero区域 + 数据统计 + 精选套利 + 焦点事件
+ * Hero区域 + 新手引导入口 + 数据统计 + 精选套利 + 焦点事件
  */
 import { useLang } from '@/contexts/LanguageContext';
 import { ecosystemStats, arbitrageCards, timelineEvents } from '@/lib/data';
-import { TrendingUp, Users, DollarSign, Layers, Calendar, ArrowRight, ExternalLink } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, Layers, Calendar, ArrowRight, ExternalLink, Sparkles, BookOpen, Shield, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 
@@ -66,7 +66,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   'Real-time monitoring of Renaiss Protocol marketplace, automatically identifying underpriced cards with professional investment analysis.'
                 )}
               </p>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => onNavigate('arbitrage')}
                   className="btn-primary px-5 py-2.5 rounded-lg text-sm"
@@ -74,10 +74,11 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   {t('开始扫描', 'Start Scanning')} →
                 </button>
                 <button
-                  onClick={() => onNavigate('events')}
-                  className="px-5 py-2.5 rounded-lg text-sm font-medium bg-white/[0.05] text-white/65 hover:bg-white/[0.08] border border-white/[0.08] transition-colors"
+                  onClick={() => onNavigate('beginner')}
+                  className="px-5 py-2.5 rounded-lg text-sm font-medium bg-ice/[0.08] text-ice/80 hover:bg-ice/[0.12] border border-ice/15 transition-colors flex items-center gap-2"
                 >
-                  {t('了解更多', 'Learn More')}
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {t('新手入门', 'Beginner Guide')}
                 </button>
               </div>
             </motion.div>
@@ -95,6 +96,34 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </div>
       </section>
 
+      {/* Quick Navigation Cards — 新手引导入口 */}
+      <section className="mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { icon: Sparkles, title: t('新手专区', 'Beginner Zone'), desc: t('从零开始了解 Renaiss 生态', 'Learn Renaiss from scratch'), tab: 'beginner', gradient: 'from-ice/15 to-violet/10', border: 'border-ice/15', iconColor: 'text-ice' },
+            { icon: Shield, title: t('SBT 图鉴', 'SBT Atlas'), desc: t('30+ SBT 完整收录与分析', '30+ SBTs fully cataloged'), tab: 'sbt', gradient: 'from-purple-500/15 to-violet/10', border: 'border-purple-500/15', iconColor: 'text-purple-400' },
+            { icon: Zap, title: t('抽卡模拟', 'Gacha Simulator'), desc: t('模拟抽卡体验和概率分析', 'Simulate gacha experience'), tab: 'simulator', gradient: 'from-amber-500/15 to-orange-500/10', border: 'border-amber-500/15', iconColor: 'text-amber-400' },
+            { icon: BookOpen, title: t('事件中心', 'Events Hub'), desc: t('追踪 Renaiss 最新动态', 'Track latest Renaiss updates'), tab: 'events', gradient: 'from-emerald-500/15 to-teal-500/10', border: 'border-emerald-500/15', iconColor: 'text-emerald-400' },
+          ].map((item, i) => (
+            <motion.button
+              key={item.tab}
+              onClick={() => onNavigate(item.tab)}
+              className={`glass-card rounded-xl p-4 text-left group bg-gradient-to-br ${item.gradient} border ${item.border} hover:scale-[1.02] transition-all`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.08 }}
+            >
+              <item.icon className={`w-6 h-6 ${item.iconColor} mb-2 opacity-70 group-hover:opacity-100 transition-opacity`} />
+              <h3 className="text-[14px] font-semibold text-white/80 mb-1">{item.title}</h3>
+              <p className="text-[11px] text-white/35">{item.desc}</p>
+              <div className="flex items-center gap-1 mt-2 text-[11px] text-white/25 group-hover:text-white/50 transition-colors">
+                {t('进入', 'Enter')} <ArrowRight className="w-3 h-3" />
+              </div>
+            </motion.button>
+          ))}
+        </div>
+      </section>
+
       {/* Stats Grid */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         {stats.map((stat, i) => (
@@ -103,7 +132,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             className="glass-card rounded-xl p-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
+            transition={{ delay: 0.3 + i * 0.1 }}
           >
             <div className="flex items-center gap-2 mb-2">
               <stat.icon className="w-4 h-4 text-ice-dim" />
@@ -136,7 +165,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               className="glass-card rounded-xl overflow-hidden card-positive"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 + i * 0.1 }}
+              transition={{ delay: 0.5 + i * 0.1 }}
             >
               <div className="aspect-square bg-black/20 relative overflow-hidden">
                 <img
@@ -148,7 +177,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 <div className="absolute top-2 right-2 badge-ice px-2 py-0.5 rounded-full text-[10px] font-bold">
                   +{card.spreadPct}%
                 </div>
-                {/* Live indicator */}
                 <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/40 backdrop-blur-sm">
                   <div className="live-dot" />
                   <span className="text-[8px] text-white/50">LIVE</span>
@@ -192,7 +220,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               className="glass-card rounded-xl p-4 flex items-start gap-4"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.5 + i * 0.1 }}
+              transition={{ delay: 0.7 + i * 0.1 }}
             >
               <div className="shrink-0 w-10 h-10 rounded-lg bg-ice/10 flex items-center justify-center">
                 <Calendar className="w-4 h-4 text-ice-dim" />
