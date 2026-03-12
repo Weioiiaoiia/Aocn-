@@ -1,0 +1,19 @@
+{
+  "buildCommand": "vite build",
+  "outputDirectory": "dist/public",
+  "framework": null,
+  "rewrites": [
+    { "source": "/api/cards", "destination": "/api/cards" },
+    { "source": "/api/refresh", "destination": "/api/refresh" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "functions": {
+    "api/cards.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "api/refresh.ts": {
+      "maxDuration": 10
+    }
+  }
+}

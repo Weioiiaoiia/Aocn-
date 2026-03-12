@@ -132,7 +132,7 @@ export async function fetchCards(params: FetchCardsParams = {}): Promise<FetchCa
 
 export async function fetchAllCards(): Promise<Card[]> {
   return fetchWithRetry(async () => {
-    const resp = await fetchWithTimeout(`${API_BASE}/cards/all`);
+    const resp = await fetchWithTimeout(`${API_BASE}/cards?limit=10000&sortBy=spreadPct&sortOrder=desc`);
     if (!resp.ok) throw new Error(`API error: ${resp.status} ${resp.statusText}`);
     const data = await resp.json();
     cachedAllCards = data.cards;
@@ -148,7 +148,7 @@ export async function fetchAllCards(): Promise<Card[]> {
 
 export async function refreshCards(): Promise<{ success: boolean; count: number }> {
   return fetchWithRetry(async () => {
-    const resp = await fetchWithTimeout(`${API_BASE}/cards/refresh`, { method: 'POST' }, 60000); // 60s timeout for refresh
+    const resp = await fetchWithTimeout(`${API_BASE}/refresh`, { method: 'POST' }, 60000); // 60s timeout for refresh
     if (!resp.ok) throw new Error(`API error: ${resp.status} ${resp.statusText}`);
     return resp.json();
   }, MAX_RETRIES, 'refreshCards');
