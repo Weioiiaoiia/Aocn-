@@ -1,5 +1,5 @@
 /*
- * Design: Obsidian Glass — 深色底部栏
+ * Design: AOCN Footer — Ice Blue + Violet
  * 包含所有社交链接、作者信息、免责声明
  */
 import { useLang } from '@/contexts/LanguageContext';
@@ -26,7 +26,7 @@ export default function Footer() {
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-[13px] text-white/40 hover:text-emerald-400 transition-colors"
+              className="flex items-center gap-1.5 text-[13px] text-white/40 hover:text-ice transition-colors"
             >
               <span className="text-white/20">{t(link.label, link.labelEn)}</span>
               {link.name}

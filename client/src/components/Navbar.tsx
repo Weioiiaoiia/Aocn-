@@ -1,6 +1,6 @@
 /*
- * Design: Obsidian Glass — 深色毛玻璃导航栏
- * 固定顶部，半透明背景，翡翠绿活跃指示器
+ * AOCN Navbar — Ice Blue + Violet theme
+ * 固定顶部导航，可切换7大模块
  */
 import { useLang } from '@/contexts/LanguageContext';
 import { Globe, ExternalLink } from 'lucide-react';
@@ -26,15 +26,13 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
   const { lang, toggleLang, t } = useLang();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.06]"
-      style={{ background: 'rgba(10,10,14,0.82)', backdropFilter: 'blur(24px)' }}>
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.05]"
+      style={{ background: 'rgba(8,8,16,0.85)', backdropFilter: 'blur(24px)' }}>
       <div className="container flex items-center justify-between h-14">
         {/* Logo */}
         <div className="flex items-center gap-2.5 shrink-0">
           <img src={LOGO_URL} alt="AOCN" className="w-8 h-8 rounded-lg" />
-          <span className="text-[15px] font-semibold tracking-tight text-white/90">
-            Renaiss{t('套利分析', ' Arbitrage')}
-          </span>
+          <span className="text-[15px] font-bold tracking-wide text-gradient">AOCN</span>
         </div>
 
         {/* Tabs */}
@@ -46,7 +44,7 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
               className={`nav-link text-[13px] px-3 py-1.5 rounded-md transition-all duration-200 ${
                 activeTab === tab.id
                   ? 'active text-white bg-white/[0.06]'
-                  : 'text-white/45 hover:text-white/70 hover:bg-white/[0.03]'
+                  : 'text-white/40 hover:text-white/65 hover:bg-white/[0.03]'
               }`}
             >
               {lang === 'zh' ? tab.zh : tab.en}
@@ -60,14 +58,14 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
             href="https://www.renaiss.xyz/marketplace"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden sm:flex items-center gap-1.5 text-[12px] text-white/40 hover:text-emerald-400 transition-colors"
+            className="hidden sm:flex items-center gap-1.5 text-[12px] text-white/35 hover:text-ice transition-colors"
           >
             {t('市场', 'Market')}
             <ExternalLink className="w-3 h-3" />
           </a>
           <button
             onClick={toggleLang}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] text-white/50 hover:text-white/80 hover:bg-white/[0.05] transition-all"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] text-white/45 hover:text-white/75 hover:bg-white/[0.04] transition-all"
           >
             <Globe className="w-3.5 h-3.5" />
             {lang === 'zh' ? 'EN' : '中文'}
@@ -83,8 +81,8 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
             onClick={() => onTabChange(tab.id)}
             className={`whitespace-nowrap text-[12px] px-3 py-1.5 rounded-md transition-all ${
               activeTab === tab.id
-                ? 'text-white bg-white/[0.08]'
-                : 'text-white/40 hover:text-white/60'
+                ? 'text-white bg-white/[0.07]'
+                : 'text-white/35 hover:text-white/55'
             }`}
           >
             {lang === 'zh' ? tab.zh : tab.en}

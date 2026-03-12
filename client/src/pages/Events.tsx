@@ -1,5 +1,5 @@
 /*
- * Design: Obsidian Glass — 事件中心
+ * Design: AOCN Events — Ice Blue + Violet
  * 交互式垂直时间线，每条标注来源
  */
 import { useLang } from '@/contexts/LanguageContext';
@@ -50,7 +50,7 @@ export default function Events() {
                 <div className={`absolute left-3 top-4 w-3 h-3 rounded-full border-2 ${
                   evt.hasSbt
                     ? 'bg-purple-500/30 border-purple-400'
-                    : 'bg-emerald-500/20 border-emerald-400/50'
+                    : 'bg-ice/20 border-ice/50'
                 }`} />
 
                 <div
@@ -67,7 +67,7 @@ export default function Events() {
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={e => e.stopPropagation()}
-                          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] bg-white/[0.04] text-white/35 hover:text-emerald-400 border border-white/[0.06] transition-colors"
+                          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] bg-white/[0.04] text-white/35 hover:text-ice border border-white/[0.06] transition-colors"
                         >
                           <SourceIcon type={evt.sourceType} />
                           {evt.source}

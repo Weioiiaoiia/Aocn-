@@ -1,5 +1,5 @@
 /*
- * Design: Obsidian Glass — Main Layout
+ * Design: AOCN Main Layout — Ice Blue + Violet
  * 顶部导航切换 + 各模块渲染 + 底部Footer
  */
 import { useState, useEffect } from 'react';

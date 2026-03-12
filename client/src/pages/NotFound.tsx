@@ -10,7 +10,7 @@ export default function NotFound() {
         <p className="text-sm text-white/30 mb-6">Page not found</p>
         <button
           onClick={() => setLocation('/')}
-          className="px-4 py-2 rounded-lg text-sm bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
+          className="px-4 py-2 rounded-lg text-sm bg-ice/10 text-ice border border-ice/20 hover:bg-ice/20 transition-colors"
         >
           Back to Home
         </button>

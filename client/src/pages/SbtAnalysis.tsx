@@ -1,5 +1,5 @@
 /*
- * Design: Obsidian Glass — SBT分析中心
+ * Design: AOCN SBT — Ice Blue + Violet
  * SBT画廊 + 深度分析（为何获得、条件、权益）
  */
 import { useLang } from '@/contexts/LanguageContext';
@@ -83,7 +83,7 @@ export default function SbtAnalysis() {
                   {/* How to get */}
                   <div className="rounded-lg bg-white/[0.02] p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <Award className="w-4 h-4 text-emerald-400/60" />
+                      <Award className="w-4 h-4 text-ice-dim" />
                       <h4 className="text-[12px] font-semibold text-white/60">{t('如何获得', 'How to Earn')}</h4>
                     </div>
                     <p className="text-[12px] text-white/40 leading-relaxed">{t(selected.howToGet, selected.howToGetEn)}</p>
