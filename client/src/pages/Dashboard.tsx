@@ -1,0 +1,222 @@
+/*
+ * Design: Obsidian Glass — 生态看板首页
+ * Hero区域 + 数据统计 + 精选套利机会 + 焦点事件
+ */
+import { useLang } from '@/contexts/LanguageContext';
+import { ecosystemStats, arbitrageCards, timelineEvents } from '@/lib/data';
+import { TrendingUp, Users, DollarSign, Layers, Calendar, ArrowRight, ExternalLink } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+
+const HERO_BG = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663427415692/ByMrgW2BXPeym8jL7YKc6Z/hero-bg-mJZBwTZJYPUCECtooN6XPo.webp';
+const CARDS_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663427415692/ByMrgW2BXPeym8jL7YKc6Z/cards-showcase-3wXnbpjUoQJmKgKRgL65zu.webp';
+
+function AnimatedNumber({ target, prefix = '' }: { target: number; prefix?: string }) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    const duration = 1500;
+    const start = performance.now();
+    const step = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setVal(Math.floor(eased * target));
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [target]);
+  return <span>{prefix}{val.toLocaleString()}</span>;
+}
+
+interface DashboardProps {
+  onNavigate: (tab: string) => void;
+}
+
+export default function Dashboard({ onNavigate }: DashboardProps) {
+  const { t } = useLang();
+  const topDeals = arbitrageCards.slice(0, 4);
+  const recentEvents = timelineEvents.slice(-3).reverse();
+
+  const stats = [
+    { icon: Users, label: t('总用户', 'Total Users'), value: ecosystemStats.totalUsers, prefix: '', suffix: '+' },
+    { icon: DollarSign, label: t('交易总额', 'Total Volume'), value: ecosystemStats.totalVolume, prefix: '$', suffix: '+' },
+    { icon: Layers, label: t('链上藏品', 'On-chain Cards'), value: ecosystemStats.totalCards, prefix: '', suffix: '+' },
+    { icon: TrendingUp, label: t('合作伙伴', 'Partners'), value: ecosystemStats.partners, prefix: '', suffix: '' },
+  ];
+
+  return (
+    <div>
+      {/* Hero Section */}
+      <section className="relative overflow-hidden rounded-2xl mb-8"
+        style={{ minHeight: '380px' }}>
+        <div className="absolute inset-0">
+          <img src={HERO_BG} alt="" className="w-full h-full object-cover opacity-40" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
+        </div>
+        <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8 p-8 lg:p-12">
+          <div className="flex-1">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+              <h1 className="text-3xl lg:text-5xl font-bold leading-tight mb-4">
+                {t('发现 ', 'Discover ')}
+                <span className="text-gradient">{t('价值洼地', 'Value Gaps')}</span>
+                <br />
+                {t('智能套利分析', 'Smart Arbitrage Analysis')}
+              </h1>
+              <p className="text-white/50 text-sm lg:text-base max-w-lg mb-6 leading-relaxed">
+                {t(
+                  '实时监控 Renaiss Protocol 市场，自动识别低于市场价的卡片，为您提供专业的投资分析和入手建议。',
+                  'Real-time monitoring of Renaiss Protocol marketplace, automatically identifying underpriced cards with professional investment analysis and recommendations.'
+                )}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => onNavigate('arbitrage')}
+                  className="px-5 py-2.5 rounded-lg text-sm font-medium bg-emerald-500 text-black hover:bg-emerald-400 transition-colors"
+                >
+                  {t('开始扫描', 'Start Scanning')} →
+                </button>
+                <button
+                  onClick={() => onNavigate('events')}
+                  className="px-5 py-2.5 rounded-lg text-sm font-medium bg-white/[0.06] text-white/70 hover:bg-white/[0.1] border border-white/[0.08] transition-colors"
+                >
+                  {t('了解更多', 'Learn More')}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+          <div className="hidden lg:block w-80 shrink-0">
+            <motion.img
+              src={CARDS_IMG}
+              alt="Collectible Cards"
+              className="w-full rounded-xl opacity-80"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 0.8, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Grid */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+        {stats.map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            className="glass-card rounded-xl p-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <stat.icon className="w-4 h-4 text-emerald-400/60" />
+              <span className="text-[11px] text-white/35 uppercase tracking-wider">{stat.label}</span>
+            </div>
+            <div className="text-xl lg:text-2xl font-bold text-white/90 font-mono">
+              <AnimatedNumber target={stat.value} prefix={stat.prefix} />{stat.suffix}
+            </div>
+          </motion.div>
+        ))}
+      </section>
+
+      {/* Top Arbitrage Opportunities */}
+      <section className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white/80">
+            {t('🔥 热门套利机会', '🔥 Top Arbitrage Opportunities')}
+          </h2>
+          <button
+            onClick={() => onNavigate('arbitrage')}
+            className="flex items-center gap-1 text-[12px] text-emerald-400/70 hover:text-emerald-400 transition-colors"
+          >
+            {t('查看全部', 'View All')} <ArrowRight className="w-3 h-3" />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {topDeals.map((card, i) => (
+            <motion.div
+              key={card.id}
+              className="glass-card rounded-xl overflow-hidden card-arbitrage-positive"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 + i * 0.1 }}
+            >
+              <div className="aspect-square bg-black/30 relative overflow-hidden">
+                <img
+                  src={card.imgUrl}
+                  alt={card.name}
+                  className="w-full h-full object-contain p-3"
+                  loading="lazy"
+                />
+                <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  +{card.spreadPct}%
+                </div>
+              </div>
+              <div className="p-3">
+                <p className="text-[11px] text-white/60 line-clamp-2 mb-2 leading-relaxed">{card.name}</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] text-white/30">{t('挂牌价', 'Listed')}</div>
+                    <div className="text-sm font-mono font-semibold text-white/80">${card.price}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] text-white/30">FMV</div>
+                    <div className="text-sm font-mono font-semibold text-emerald-400">${card.fmv}</div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Recent Events */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white/80">
+            {t('📅 最新动态', '📅 Recent Events')}
+          </h2>
+          <button
+            onClick={() => onNavigate('events')}
+            className="flex items-center gap-1 text-[12px] text-emerald-400/70 hover:text-emerald-400 transition-colors"
+          >
+            {t('查看全部', 'View All')} <ArrowRight className="w-3 h-3" />
+          </button>
+        </div>
+        <div className="space-y-2">
+          {recentEvents.map((evt, i) => (
+            <motion.div
+              key={evt.id}
+              className="glass-card rounded-xl p-4 flex items-start gap-4"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5 + i * 0.1 }}
+            >
+              <div className="shrink-0 w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <Calendar className="w-4 h-4 text-emerald-400/60" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[11px] text-white/30 font-mono">{evt.date}</span>
+                  {evt.hasSbt && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                      SBT
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-sm font-medium text-white/80 mb-1">{t(evt.title, evt.titleEn)}</h3>
+                <p className="text-[11px] text-white/35 line-clamp-1">{t(evt.description, evt.descriptionEn)}</p>
+              </div>
+              <a
+                href={evt.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 flex items-center gap-1 text-[10px] text-white/25 hover:text-emerald-400 transition-colors"
+              >
+                {evt.source} <ExternalLink className="w-3 h-3" />
+              </a>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
