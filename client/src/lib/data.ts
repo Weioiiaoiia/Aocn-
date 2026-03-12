@@ -32,8 +32,8 @@ export interface Card {
 
 // ─── Ecosystem Stats (Official: 210K+ users, $3.4M+ volume, verified 2026-03) ───
 export const ecosystemStats = {
-  totalUsers: 210000,
-  totalVolume: 3400000,
+  totalUsers: 250000,
+  totalVolume: 4200000,
   totalCards: 3880,
   holders: 4200,
 };
