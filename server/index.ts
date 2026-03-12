@@ -156,6 +156,9 @@ function recordPriceSnapshot(cards: ParsedCard[]) {
 let cachedCards: ParsedCard[] = [];
 let lastFetchTime = 0;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+let fetchInProgress = false; // Prevent concurrent fetches
+let consecutiveFailures = 0;
+const MAX_CONSECUTIVE_FAILURES = 5;
 
 function parsePrice(raw: string | number): number {
   if (!raw || raw === "NO-OFFER-PRICE") return 0;
@@ -251,6 +254,31 @@ function buildTrpcInput(offset: number, limit: number) {
   });
 }
 
+// ─── Robust fetch with retry and timeout ───
+async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 3, timeout = 15000): Promise<Response> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      const resp = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!resp.ok) {
+        throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+      }
+      return resp;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < retries) {
+        const delay = 1000 * Math.pow(2, attempt) + Math.random() * 500;
+        console.warn(`[API] Fetch attempt ${attempt + 1} failed: ${lastError.message}, retrying in ${Math.round(delay)}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastError || new Error("Fetch failed after retries");
+}
+
 async function fetchAllFromRenaiss(): Promise<ParsedCard[]> {
   const allCards: ParsedCard[] = [];
   const seenIds = new Set<string>();
@@ -258,6 +286,8 @@ async function fetchAllFromRenaiss(): Promise<ParsedCard[]> {
   const limit = 25;
   let total = 0;
   let hasMore = true;
+  let consecutivePageErrors = 0;
+  const MAX_PAGE_ERRORS = 3;
 
   console.log("[API] Starting fetch from Renaiss marketplace...");
 
@@ -266,22 +296,20 @@ async function fetchAllFromRenaiss(): Promise<ParsedCard[]> {
       const input = buildTrpcInput(offset, limit);
       const url = `${RENAISS_API}?batch=1&input=${encodeURIComponent(input)}`;
 
-      const resp = await fetch(url, {
+      const resp = await fetchWithRetry(url, {
         headers: {
           "User-Agent": "AOCN-Bot/1.0",
           Accept: "*/*",
           Referer: "https://www.renaiss.xyz/marketplace",
         },
-      });
-
-      if (!resp.ok) {
-        console.error(`[API] Error at offset ${offset}: ${resp.status}`);
-        break;
-      }
+      }, 2, 15000);
 
       const data = await resp.json();
       const result = data[0]?.result?.data?.json;
-      if (!result) break;
+      if (!result) {
+        console.warn(`[API] No result data at offset ${offset}, stopping`);
+        break;
+      }
 
       const collection = result.collection || [];
       const pagination = result.pagination || {};
@@ -292,15 +320,21 @@ async function fetchAllFromRenaiss(): Promise<ParsedCard[]> {
       }
 
       for (const raw of collection) {
-        const card = parseCard(raw);
-        if (!seenIds.has(card.id)) {
-          seenIds.add(card.id);
-          allCards.push(card);
+        try {
+          const card = parseCard(raw);
+          if (!seenIds.has(card.id)) {
+            seenIds.add(card.id);
+            allCards.push(card);
+          }
+        } catch (parseErr) {
+          console.warn(`[API] Failed to parse card at offset ${offset}:`, parseErr);
+          // Skip individual card parse errors, don't crash the whole fetch
         }
       }
 
       hasMore = pagination.hasMore === true && collection.length > 0;
       offset += limit;
+      consecutivePageErrors = 0; // Reset on success
 
       if (offset % 500 === 0) {
         console.log(`[API] Fetched ${allCards.length}/${total} cards...`);
@@ -309,8 +343,15 @@ async function fetchAllFromRenaiss(): Promise<ParsedCard[]> {
       // Rate limiting
       await new Promise((r) => setTimeout(r, 200));
     } catch (err) {
-      console.error(`[API] Error at offset ${offset}:`, err);
-      await new Promise((r) => setTimeout(r, 1000));
+      consecutivePageErrors++;
+      console.error(`[API] Error at offset ${offset} (${consecutivePageErrors}/${MAX_PAGE_ERRORS}):`, err);
+      
+      if (consecutivePageErrors >= MAX_PAGE_ERRORS) {
+        console.error(`[API] Too many consecutive page errors, stopping fetch with ${allCards.length} cards collected`);
+        break;
+      }
+      
+      await new Promise((r) => setTimeout(r, 2000));
       offset += limit; // Skip this page
     }
   }
@@ -328,15 +369,43 @@ async function getCards(): Promise<ParsedCard[]> {
     return cachedCards;
   }
 
-  try {
-    cachedCards = await fetchAllFromRenaiss();
-    lastFetchTime = now;
+  // Prevent concurrent fetches
+  if (fetchInProgress) {
+    console.log("[API] Fetch already in progress, returning cached data");
+    return cachedCards;
+  }
 
-    // Record price snapshot for history
-    recordPriceSnapshot(cachedCards);
+  fetchInProgress = true;
+  try {
+    const newCards = await fetchAllFromRenaiss();
+    
+    // Only update cache if we got a reasonable amount of data
+    if (newCards.length > 0) {
+      cachedCards = newCards;
+      lastFetchTime = now;
+      consecutiveFailures = 0;
+
+      // Record price snapshot for history
+      recordPriceSnapshot(cachedCards);
+    } else if (cachedCards.length > 0) {
+      console.warn("[API] Got 0 cards from API, keeping stale cache");
+      // Don't update lastFetchTime so we retry sooner
+    }
   } catch (err) {
-    console.error("[API] Failed to fetch cards:", err);
-    // Return cached data even if stale
+    consecutiveFailures++;
+    console.error(`[API] Failed to fetch cards (failure ${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}):`, err);
+    
+    // Exponential backoff on consecutive failures
+    if (consecutiveFailures < MAX_CONSECUTIVE_FAILURES) {
+      // Will retry on next request, keep stale cache
+      console.log("[API] Will retry on next request, returning stale cache");
+    } else {
+      console.error("[API] Max consecutive failures reached, extending cache TTL");
+      // Extend cache TTL to avoid hammering a down API
+      lastFetchTime = now - CACHE_TTL + 60000; // Retry in 1 minute
+    }
+  } finally {
+    fetchInProgress = false;
   }
 
   return cachedCards;
@@ -351,7 +420,24 @@ async function startServer() {
   // Load price history from disk on startup
   loadPriceHistory();
 
+  // ─── CORS and error handling middleware ───
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    next();
+  });
+
   // ─── API Routes ───
+
+  // Health check
+  app.get("/api/health", (_req, res) => {
+    res.json({
+      status: "ok",
+      cachedCards: cachedCards.length,
+      lastFetch: lastFetchTime ? new Date(lastFetchTime).toISOString() : null,
+      consecutiveFailures,
+      fetchInProgress,
+    });
+  });
 
   // Get cards with pagination, filtering, sorting
   app.get("/api/cards", async (req, res) => {
@@ -415,8 +501,8 @@ async function startServer() {
       };
       filtered.sort(sortFn);
 
-      const off = parseInt(offset);
-      const lim = parseInt(limit);
+      const off = parseInt(offset) || 0;
+      const lim = Math.min(parseInt(limit) || 50, 10000);
       const paged = filtered.slice(off, off + lim);
 
       const listedCards = allCards.filter((c) => c.price > 0);
@@ -454,10 +540,20 @@ async function startServer() {
           overpricedCount,
           avgSpread,
         },
+        meta: {
+          cacheAge: lastFetchTime ? Date.now() - lastFetchTime : null,
+          isStale: lastFetchTime ? Date.now() - lastFetchTime > CACHE_TTL : true,
+        },
       });
     } catch (err) {
       console.error("[API] Error:", err);
-      res.status(500).json({ error: "Failed to fetch cards" });
+      // Return empty data instead of 500 error to prevent frontend crash
+      res.json({
+        cards: [],
+        pagination: { total: 0, limit: 50, offset: 0, hasMore: false },
+        stats: { totalCards: 0, listedCards: 0, arbitrageCount: 0, overpricedCount: 0, avgSpread: 0 },
+        meta: { error: "Failed to fetch cards, will retry automatically" },
+      });
     }
   });
 
@@ -468,7 +564,7 @@ async function startServer() {
       res.json({ cards: allCards, total: allCards.length });
     } catch (err) {
       console.error("[API] Error:", err);
-      res.status(500).json({ error: "Failed to fetch cards" });
+      res.json({ cards: [], total: 0, meta: { error: "Failed to fetch cards" } });
     }
   });
 
@@ -496,7 +592,7 @@ async function startServer() {
       });
     } catch (err) {
       console.error("[API] History error:", err);
-      res.status(500).json({ error: "Failed to fetch history" });
+      res.json({ cardId: req.params.cardId, days: 30, dataPoints: 0, history: [] });
     }
   });
 
@@ -530,35 +626,40 @@ async function startServer() {
       });
     } catch (err) {
       console.error("[API] Batch history error:", err);
-      res.status(500).json({ error: "Failed to fetch batch history" });
+      res.json({ days: 30, cards: {} });
     }
   });
 
   // Get history stats (how many cards tracked, total data points)
   app.get("/api/history/stats", (_req, res) => {
-    const cardCount = Object.keys(priceHistory).length;
-    let totalPoints = 0;
-    let oldestTimestamp = "";
-    let newestTimestamp = "";
+    try {
+      const cardCount = Object.keys(priceHistory).length;
+      let totalPoints = 0;
+      let oldestTimestamp = "";
+      let newestTimestamp = "";
 
-    for (const snapshots of Object.values(priceHistory)) {
-      totalPoints += snapshots.length;
-      for (const s of snapshots) {
-        if (!oldestTimestamp || s.timestamp < oldestTimestamp)
-          oldestTimestamp = s.timestamp;
-        if (!newestTimestamp || s.timestamp > newestTimestamp)
-          newestTimestamp = s.timestamp;
+      for (const snapshots of Object.values(priceHistory)) {
+        totalPoints += snapshots.length;
+        for (const s of snapshots) {
+          if (!oldestTimestamp || s.timestamp < oldestTimestamp)
+            oldestTimestamp = s.timestamp;
+          if (!newestTimestamp || s.timestamp > newestTimestamp)
+            newestTimestamp = s.timestamp;
+        }
       }
-    }
 
-    res.json({
-      trackedCards: cardCount,
-      totalDataPoints: totalPoints,
-      oldestRecord: oldestTimestamp || null,
-      newestRecord: newestTimestamp || null,
-      maxHistoryDays: MAX_HISTORY_DAYS,
-      snapshotIntervalMinutes: HISTORY_SNAPSHOT_INTERVAL / 60000,
-    });
+      res.json({
+        trackedCards: cardCount,
+        totalDataPoints: totalPoints,
+        oldestRecord: oldestTimestamp || null,
+        newestRecord: newestTimestamp || null,
+        maxHistoryDays: MAX_HISTORY_DAYS,
+        snapshotIntervalMinutes: HISTORY_SNAPSHOT_INTERVAL / 60000,
+      });
+    } catch (err) {
+      console.error("[API] Stats error:", err);
+      res.json({ trackedCards: 0, totalDataPoints: 0, oldestRecord: null, newestRecord: null, maxHistoryDays: 30, snapshotIntervalMinutes: 30 });
+    }
   });
 
   // Force refresh
@@ -569,7 +670,7 @@ async function startServer() {
       res.json({ success: true, count: cards.length });
     } catch (err) {
       console.error("[API] Error:", err);
-      res.status(500).json({ error: "Failed to refresh" });
+      res.json({ success: false, count: cachedCards.length, error: "Refresh failed, using cached data" });
     }
   });
 
@@ -592,6 +693,8 @@ async function startServer() {
   console.log("[Server] Pre-fetching card data...");
   getCards().then((cards) => {
     console.log(`[Server] Pre-fetched ${cards.length} cards`);
+  }).catch(err => {
+    console.error("[Server] Pre-fetch failed:", err);
   });
 
   // Periodic history snapshots (every 30 min)
@@ -600,6 +703,21 @@ async function startServer() {
       recordPriceSnapshot(cachedCards);
     }
   }, HISTORY_SNAPSHOT_INTERVAL);
+
+  // Background refresh every 3 minutes to keep cache warm
+  setInterval(async () => {
+    if (!fetchInProgress && cachedCards.length > 0) {
+      const age = Date.now() - lastFetchTime;
+      if (age > CACHE_TTL * 0.8) {
+        console.log("[Server] Background cache refresh...");
+        try {
+          await getCards();
+        } catch (err) {
+          console.error("[Server] Background refresh failed:", err);
+        }
+      }
+    }
+  }, 3 * 60 * 1000);
 
   server.listen(port, () => {
     console.log(`[Server] Running on http://localhost:${port}/`);

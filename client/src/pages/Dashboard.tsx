@@ -38,15 +38,22 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   useEffect(() => {
     fetchCards({ offset: 0, limit: 4, sortBy: 'spreadPct', sortOrder: 'desc', listedOnly: true })
       .then(resp => {
-        // Only show positive spread cards
-        const positive = resp.cards.filter(c => c.spreadPct > 0);
-        setTopDeals(positive.slice(0, 4));
-        setLiveStats(prev => ({
-          ...prev,
-          totalCards: resp.stats.totalCards,
-        }));
+        if (resp.cards && resp.cards.length > 0) {
+          // Only show positive spread cards
+          const positive = resp.cards.filter(c => c.spreadPct > 0);
+          setTopDeals(positive.slice(0, 4));
+        }
+        if (resp.stats && resp.stats.totalCards > 0) {
+          setLiveStats(prev => ({
+            ...prev,
+            totalCards: resp.stats.totalCards,
+          }));
+        }
       })
-      .catch(console.error)
+      .catch(err => {
+        console.error('Dashboard fetch error:', err);
+        // Silently fail - dashboard will show static data
+      })
       .finally(() => setLoadingDeals(false));
   }, []);
 

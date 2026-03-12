@@ -2,6 +2,7 @@
  * AOCN Radar — Real-time card listing monitor
  * Inspired by traded.gg/radar concept
  * Shows latest listed cards, price movements, and real-time arbitrage discovery
+ * Enhanced with robust error handling and auto-recovery
  */
 import { useLang } from '@/contexts/LanguageContext';
 import { fetchCards, type FetchCardsResponse } from '@/lib/api';
@@ -9,13 +10,14 @@ import type { Card } from '@/lib/data';
 import {
   Radar as RadarIcon, Clock, TrendingUp, TrendingDown, ExternalLink,
   Filter, Sparkles, RefreshCw, Loader2, Zap, Activity, Eye,
-  ChevronDown, Search, Volume2, VolumeX, Heart
+  ChevronDown, Search, Volume2, VolumeX, Heart, AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 const REFRESH_INTERVAL = 30; // 30 seconds for radar
 const MAX_RADAR_ITEMS = 100;
+const RETRY_DELAY = 5000; // 5 seconds retry on error
 
 interface RadarItem extends Card {
   detectedAt: number;
@@ -74,6 +76,10 @@ function RadarCard({ item, index }: { item: RadarItem; index: number }) {
             alt={item.name}
             className="w-full h-full object-contain p-1"
             loading="lazy"
+            onError={(e) => {
+              // Fallback for broken images
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
           />
           {item.isNew && (
             <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded-full bg-emerald-500 text-white text-[8px] font-bold flex items-center gap-0.5">
@@ -149,7 +155,10 @@ export default function RadarPage() {
   const [isPaused, setIsPaused] = useState(false);
   const [totalScanned, setTotalScanned] = useState(0);
   const [newCount, setNewCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [consecutiveErrors, setConsecutiveErrors] = useState(0);
   const previousIds = useRef<Set<string>>(new Set());
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -159,7 +168,7 @@ export default function RadarPage() {
   const [showArbitrageOnly, setShowArbitrageOnly] = useState(false);
   const [languageFilter, setLanguageFilter] = useState('all');
 
-  const loadRadarData = useCallback(async () => {
+  const loadRadarData = useCallback(async (isRetry = false) => {
     try {
       const resp = await fetchCards({
         offset: 0,
@@ -171,6 +180,11 @@ export default function RadarPage() {
 
       const now = Date.now();
       let newDetected = 0;
+
+      // Validate response
+      if (!resp.cards || !Array.isArray(resp.cards)) {
+        throw new Error('Invalid response format');
+      }
 
       const radarItems: RadarItem[] = resp.cards.map((card, i) => {
         const isNew = !previousIds.current.has(card.id);
@@ -187,15 +201,43 @@ export default function RadarPage() {
       // Update previous IDs
       previousIds.current = new Set(resp.cards.map(c => c.id));
 
-      setItems(radarItems);
-      setTotalScanned(resp.stats.totalCards);
+      // Only update state if we got data (or if we had no data before)
+      if (radarItems.length > 0 || items.length === 0) {
+        setItems(radarItems);
+      }
+      setTotalScanned(resp.stats?.totalCards || 0);
       setNewCount(newDetected);
       setCountdown(REFRESH_INTERVAL);
+      setError(null);
+      setConsecutiveErrors(0);
     } catch (err) {
       console.error('Radar fetch error:', err);
+      setConsecutiveErrors(prev => prev + 1);
+      
+      // Only show error if we have no data
+      if (items.length === 0) {
+        setError(t('数据加载中，正在自动重试...', 'Loading data, auto-retrying...'));
+      }
+      
+      // Auto-retry with exponential backoff
+      if (!isRetry) {
+        const delay = Math.min(RETRY_DELAY * Math.pow(2, consecutiveErrors), 30000);
+        retryTimerRef.current = setTimeout(() => {
+          loadRadarData(true);
+        }, delay);
+      }
     } finally {
       setLoading(false);
     }
+  }, [items.length, consecutiveErrors, t]);
+
+  // Cleanup retry timer
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => { loadRadarData(); }, [loadRadarData]);
@@ -263,6 +305,14 @@ export default function RadarPage() {
           )}
         </p>
       </div>
+
+      {/* Connection Status */}
+      {error && items.length > 0 && (
+        <div className="mb-4 flex items-center justify-center gap-2 text-xs text-amber-500">
+          <AlertCircle className="w-3.5 h-3.5" />
+          {t('数据连接暂时中断，显示缓存数据，正在自动重连...', 'Connection interrupted, showing cached data, auto-reconnecting...')}
+        </div>
+      )}
 
       {/* Live Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
@@ -367,15 +417,34 @@ export default function RadarPage() {
       </div>
 
       {/* Loading */}
-      {loading && (
+      {loading && items.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mb-4" />
           <p className="text-sm text-muted-foreground">{t('雷达扫描中...', 'Radar scanning...')}</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">{t('首次加载可能需要1-2分钟', 'First load may take 1-2 minutes')}</p>
+        </div>
+      )}
+
+      {/* Error state - only show if no data at all */}
+      {error && items.length === 0 && !loading && (
+        <div className="flex flex-col items-center justify-center py-20">
+          <AlertCircle className="w-8 h-8 text-amber-500 mb-4 animate-pulse" />
+          <p className="text-sm text-muted-foreground mb-2">{error}</p>
+          <p className="text-xs text-muted-foreground/60 mb-4">
+            {t(`已重试 ${consecutiveErrors} 次，将继续自动重试`, `Retried ${consecutiveErrors} times, will continue auto-retrying`)}
+          </p>
+          <button 
+            onClick={() => loadRadarData()}
+            className="btn-primary px-6 py-2.5 rounded-xl text-sm flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            {t('立即重试', 'Retry Now')}
+          </button>
         </div>
       )}
 
       {/* Radar Feed */}
-      {!loading && (
+      {(items.length > 0 || (!loading && !error)) && (
         <>
           {/* Arbitrage Alerts Section */}
           {arbitrageItems.length > 0 && (
@@ -407,10 +476,11 @@ export default function RadarPage() {
             </div>
           </div>
 
-          {filteredItems.length === 0 && (
+          {filteredItems.length === 0 && items.length > 0 && (
             <div className="flex flex-col items-center justify-center py-16">
               <RadarIcon className="w-8 h-8 text-muted-foreground mb-4" />
               <p className="text-sm text-muted-foreground">{t('雷达未检测到匹配的卡牌', 'No matching cards detected by radar')}</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">{t('尝试调整过滤条件', 'Try adjusting filters')}</p>
             </div>
           )}
         </>

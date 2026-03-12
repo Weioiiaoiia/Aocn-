@@ -441,10 +441,13 @@ export default function Arbitrage() {
   const { favorites, toggle: toggleFav, isFav } = useFavorites();
   const { alerts, setAlert, hasAlert, getAlert } = usePriceAlerts();
 
-  // Fetch all cards on mount
-  const loadCards = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // Fetch all cards on mount - with resilient error handling
+  const loadCards = useCallback(async (isAutoRefresh = false) => {
+    // Don't show loading spinner on auto-refresh if we already have data
+    if (!isAutoRefresh || allCards.length === 0) {
+      setLoading(true);
+    }
+    if (!isAutoRefresh) setError(null);
     try {
       const resp = await fetchCards({
         offset: 0,
@@ -453,16 +456,33 @@ export default function Arbitrage() {
         sortOrder: 'desc',
         listedOnly: true,
       });
-      setAllCards(resp.cards);
-      setStats(resp.stats);
+      // Only update if we got valid data
+      if (resp.cards && resp.cards.length > 0) {
+        setAllCards(resp.cards);
+        setStats(resp.stats);
+        setError(null);
+      } else if (resp.cards && resp.cards.length === 0 && allCards.length > 0) {
+        // API returned empty but we have cached data - keep it
+        console.warn('[Arbitrage] API returned 0 cards, keeping existing data');
+      } else {
+        setAllCards(resp.cards || []);
+        setStats(resp.stats || { totalCards: 0, listedCards: 0, arbitrageCount: 0, overpricedCount: 0, avgSpread: 0 });
+      }
       setCountdown(AUTO_REFRESH_INTERVAL);
     } catch (err) {
-      setError('Failed to load data, please try again');
       console.error('Failed to load cards:', err);
+      // Only show error if we have no data at all
+      if (allCards.length === 0) {
+        setError(t('数据加载失败，正在自动重试...', 'Failed to load data, auto-retrying...'));
+      }
+      // Auto-retry after 10 seconds on failure
+      setTimeout(() => {
+        loadCards(true);
+      }, 10000);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [allCards.length, t]);
 
   useEffect(() => { loadCards(); }, [loadCards]);
 
@@ -471,7 +491,7 @@ export default function Arbitrage() {
     const timer = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
-          loadCards();
+          loadCards(true);
           return AUTO_REFRESH_INTERVAL;
         }
         return prev - 1;
@@ -873,7 +893,7 @@ export default function Arbitrage() {
         <div className="flex flex-col items-center justify-center py-20">
           <AlertCircle className="w-8 h-8 text-red-500 mb-4" />
           <p className="text-sm text-red-500 mb-4">{error}</p>
-          <button onClick={loadCards} className="btn-primary px-6 py-2.5 rounded-xl text-sm">{t('重试', 'Retry')}</button>
+          <button onClick={() => loadCards()} className="btn-primary px-6 py-2.5 rounded-xl text-sm">{t('重试', 'Retry')}</button>
         </div>
       )}
 

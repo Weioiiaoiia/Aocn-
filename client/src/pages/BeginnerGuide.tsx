@@ -170,6 +170,9 @@ export default function BeginnerGuide() {
         </div>
         <StepCard step={1} title={t('注册 / 登录', 'Register / Login')} delay={0}>
           <p>{t('访问官网 renaiss.xyz，点击 "Log in" 登录，连接钱包（支持 BNB Chain/BSC）。新用户建议同时绑定 X 和 Discord 账号，即可免费领取 SBT。', 'Visit renaiss.xyz, click "Log in", connect wallet (BNB Chain/BSC). Link X and Discord for free SBTs.')}</p>
+          <a href="https://www.renaiss.xyz/ref/77ouo" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 mt-2 px-4 py-2 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors">
+            {t('立即注册 Renaiss', 'Register on Renaiss')} <ExternalLink className="w-3 h-3" />
+          </a>
           <InfoBox type="tip">{t('绑定社交账号是获取免费 SBT 的最简单方式！', 'Linking social accounts is the easiest way to get free SBTs!')}</InfoBox>
         </StepCard>
         <StepCard step={2} title={t('充值', 'Top Up')} delay={0.1}>
@@ -177,7 +180,7 @@ export default function BeginnerGuide() {
           <InfoBox type="info">{t('首次充值 60U 以上可直接解锁 Fund Your Account SBT', 'First deposit of 60U+ unlocks Fund Your Account SBT')}</InfoBox>
         </StepCard>
         <StepCard step={3} title={t('抽卡', 'Pull Cards')} delay={0.2}>
-          <p>{t('去 Gacha 页面，查看当前限时卡池，每个包 48~88 USDT。开包后 10 分钟内可享 85%~90% FMV 回购托底。', 'Go to Gacha page, check pools (48~88 USDT). 10-min 85%~90% FMV buyback guarantee.')}</p>
+          <p>{t('去 Gacha 页面，查看当前限时卡池，每个包 48~88 USDT。开包后 10 分钟内可享 85% FMV 即时回购托底。', 'Go to Gacha page, check pools (48~88 USDT). 10-min 85% FMV instant buyback guarantee.')}</p>
           <InfoBox type="tip">{t('抽卡 5 次以上，可领取 Pack Opener 成就 SBT！', 'Pull 5+ times to earn Pack Opener SBT!')}</InfoBox>
         </StepCard>
         <StepCard step={4} title={t('市场交易', 'Market Trading')} delay={0.3}>
@@ -236,7 +239,7 @@ export default function BeginnerGuide() {
           <h3 className="text-[15px] font-semibold text-foreground mb-4">{t('核心机制', 'Key Mechanics')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
-              { icon: Shield, title: t('保底机制', 'Buyback'), desc: t('开包后 10 分钟内可享 85%~90% FMV 回购', '10-min 85%~90% FMV buyback'), color: 'emerald' },
+              { icon: Shield, title: t('保底机制', 'Buyback'), desc: t('开包后 10 分钟内可享 85% FMV 即时回购', '10-min 85% FMV instant buyback'), color: 'emerald' },
               { icon: TrendingUp, title: t('正期望值', 'Positive EV'), desc: t('所有卡池 EV > 1，抽卡期望值正向', 'All pools EV > 1'), color: 'blue' },
               { icon: Trophy, title: t('成就 SBT', 'Achievement SBT'), desc: t('抽卡 5 次以上领取 Pack Opener SBT', 'Pull 5+ for Pack Opener SBT'), color: 'purple' },
             ].map((m, i) => (
