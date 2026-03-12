@@ -5,7 +5,7 @@
  */
 import { useLang } from '@/contexts/LanguageContext';
 import { gachaPacks, type Card } from '@/lib/data';
-import { fetchCards, refreshCards, type FetchCardsResponse } from '@/lib/api';
+import { fetchCards, refreshCards, fetchCardHistory, type FetchCardsResponse, type PriceSnapshot } from '@/lib/api';
 import {
   TrendingUp, TrendingDown, ExternalLink, Search, Filter,
   Package, ArrowUpDown, Share2, Sparkles, RefreshCw, X,
@@ -95,26 +95,51 @@ function exportCSV(cards: Card[], filename: string) {
   URL.revokeObjectURL(url);
 }
 
-// ─── Simulated Price History ───
-function generatePriceHistory(card: Card) {
-  const points = 14;
-  const history: { day: string; price: number; fmv: number }[] = [];
+// ─── Price History (Real API with fallback) ───
+function useCardHistory(card: Card) {
+  const [history, setHistory] = useState<{ day: string; price: number; fmv: number }[]>([]);
+  const [isReal, setIsReal] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchCardHistory(card.id, 14)
+      .then(resp => {
+        if (cancelled) return;
+        if (resp.history && resp.history.length >= 2) {
+          // Use real data from backend
+          const mapped = resp.history.map((s: PriceSnapshot) => {
+            const d = new Date(s.timestamp);
+            return {
+              day: `${d.getMonth() + 1}/${d.getDate()}`,
+              price: s.price,
+              fmv: s.fmv,
+            };
+          });
+          setHistory(mapped);
+          setIsReal(true);
+        } else {
+          // Not enough real data yet, generate initial baseline
+          setHistory(generateBaseline(card));
+          setIsReal(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHistory(generateBaseline(card));
+          setIsReal(false);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [card.id, card.price, card.fmv]);
+
+  return { history, isReal };
+}
+
+function generateBaseline(card: Card) {
+  // Show current price as a single-point baseline when no history exists
   const now = new Date();
-  for (let i = points - 1; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    const dayStr = `${date.getMonth() + 1}/${date.getDate()}`;
-    const variance = 0.85 + Math.random() * 0.3;
-    const fmvVariance = 0.95 + Math.random() * 0.1;
-    history.push({
-      day: dayStr,
-      price: +(card.price * variance).toFixed(2),
-      fmv: +(card.fmv * fmvVariance).toFixed(2),
-    });
-  }
-  // Last point is current
-  history[history.length - 1] = { day: history[history.length - 1].day, price: card.price, fmv: card.fmv };
-  return history;
+  const dayStr = `${now.getMonth() + 1}/${now.getDate()}`;
+  return [{ day: dayStr, price: card.price, fmv: card.fmv }];
 }
 
 // ─── Mini Chart Component ───
@@ -236,7 +261,7 @@ function CardDetail({ card, onClose, isFav, toggleFav, onCalc }: {
 }) {
   const { t } = useLang();
   const isPositive = card.spread > 0;
-  const [priceHistory] = useState(() => generatePriceHistory(card));
+  const { history: priceHistory, isReal: isRealHistory } = useCardHistory(card);
 
   return (
     <motion.div
@@ -313,11 +338,26 @@ function CardDetail({ card, onClose, isFav, toggleFav, onCalc }: {
 
             {/* Price History Chart */}
             <div className="rounded-xl bg-secondary dark:bg-white/[0.03] p-4 mb-4">
-              <h4 className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1.5">
-                <LineChart className="w-3.5 h-3.5 text-blue-500" />
-                {t('14天价格走势', '14-Day Price Trend')}
-              </h4>
-              <MiniChart data={priceHistory} />
+              <div className="flex items-center justify-between mb-1">
+                <h4 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <LineChart className="w-3.5 h-3.5 text-blue-500" />
+                  {t('价格走势', 'Price Trend')}
+                </h4>
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+                  isRealHistory
+                    ? 'bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400'
+                    : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                }`}>
+                  {isRealHistory ? t('实时数据', 'Live Data') : t('暂无历史 - 待積累', 'Collecting...')}
+                </span>
+              </div>
+              {priceHistory.length >= 2 ? (
+                <MiniChart data={priceHistory} />
+              ) : (
+                <div className="flex items-center justify-center py-6 text-[11px] text-muted-foreground/60">
+                  {t('历史数据積累中，每30分钟记录一次价格快照...', 'Accumulating history, snapshots every 30 min...')}
+                </div>
+              )}
             </div>
 
             <div className="rounded-xl bg-secondary dark:bg-white/[0.03] p-4 mb-4">

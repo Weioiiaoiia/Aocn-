@@ -1,6 +1,7 @@
 import express from "express";
 import { createServer } from "http";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -53,6 +54,104 @@ interface ParsedCard {
   ebaySearchUrl: string;
 }
 
+// ─── Price History Storage ───
+interface PriceSnapshot {
+  timestamp: string; // ISO date string
+  price: number;
+  fmv: number;
+  spreadPct: number;
+}
+
+// Store price history per card: { cardId: PriceSnapshot[] }
+const HISTORY_DIR = path.resolve(__dirname, "..", "data");
+const HISTORY_FILE = path.join(HISTORY_DIR, "price_history.json");
+const MAX_HISTORY_DAYS = 30; // Keep 30 days of history
+const HISTORY_SNAPSHOT_INTERVAL = 30 * 60 * 1000; // Snapshot every 30 minutes
+
+let priceHistory: Record<string, PriceSnapshot[]> = {};
+let lastSnapshotTime = 0;
+
+function ensureHistoryDir() {
+  if (!fs.existsSync(HISTORY_DIR)) {
+    fs.mkdirSync(HISTORY_DIR, { recursive: true });
+  }
+}
+
+function loadPriceHistory() {
+  try {
+    ensureHistoryDir();
+    if (fs.existsSync(HISTORY_FILE)) {
+      const raw = fs.readFileSync(HISTORY_FILE, "utf-8");
+      priceHistory = JSON.parse(raw);
+      console.log(
+        `[History] Loaded price history for ${Object.keys(priceHistory).length} cards`
+      );
+    } else {
+      priceHistory = {};
+      console.log("[History] No existing history file, starting fresh");
+    }
+  } catch (err) {
+    console.error("[History] Failed to load price history:", err);
+    priceHistory = {};
+  }
+}
+
+function savePriceHistory() {
+  try {
+    ensureHistoryDir();
+    fs.writeFileSync(HISTORY_FILE, JSON.stringify(priceHistory), "utf-8");
+    console.log(
+      `[History] Saved price history for ${Object.keys(priceHistory).length} cards`
+    );
+  } catch (err) {
+    console.error("[History] Failed to save price history:", err);
+  }
+}
+
+function recordPriceSnapshot(cards: ParsedCard[]) {
+  const now = Date.now();
+  if (now - lastSnapshotTime < HISTORY_SNAPSHOT_INTERVAL && lastSnapshotTime > 0) {
+    return; // Not time for a snapshot yet
+  }
+
+  const timestamp = new Date().toISOString();
+  const cutoffDate = new Date(
+    Date.now() - MAX_HISTORY_DAYS * 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  let recorded = 0;
+  for (const card of cards) {
+    if (card.price <= 0 && card.fmv <= 0) continue; // Skip cards with no price data
+
+    if (!priceHistory[card.id]) {
+      priceHistory[card.id] = [];
+    }
+
+    // Add new snapshot
+    priceHistory[card.id].push({
+      timestamp,
+      price: card.price,
+      fmv: card.fmv,
+      spreadPct: card.spreadPct,
+    });
+
+    // Prune old entries beyond MAX_HISTORY_DAYS
+    priceHistory[card.id] = priceHistory[card.id].filter(
+      (s) => s.timestamp >= cutoffDate
+    );
+
+    recorded++;
+  }
+
+  lastSnapshotTime = now;
+  console.log(
+    `[History] Recorded price snapshot for ${recorded} cards at ${timestamp}`
+  );
+
+  // Save to disk
+  savePriceHistory();
+}
+
 // In-memory cache
 let cachedCards: ParsedCard[] = [];
 let lastFetchTime = 0;
@@ -85,8 +184,12 @@ function parseCard(raw: RawCard): ParsedCard {
     attrs[attr.trait] = attr.value;
   }
 
-  const spread = fmv > 0 && price > 0 ? Math.round((fmv - price) * 100) / 100 : 0;
-  const spreadPct = fmv > 0 && price > 0 ? Math.round((fmv - price) / fmv * 1000) / 10 : 0;
+  const spread =
+    fmv > 0 && price > 0 ? Math.round((fmv - price) * 100) / 100 : 0;
+  const spreadPct =
+    fmv > 0 && price > 0
+      ? Math.round(((fmv - price) / fmv) * 1000) / 10
+      : 0;
 
   const cleanName = raw.name
     .replace(/^PSA\s+/, "")
@@ -228,6 +331,9 @@ async function getCards(): Promise<ParsedCard[]> {
   try {
     cachedCards = await fetchAllFromRenaiss();
     lastFetchTime = now;
+
+    // Record price snapshot for history
+    recordPriceSnapshot(cachedCards);
   } catch (err) {
     console.error("[API] Failed to fetch cards:", err);
     // Return cached data even if stale
@@ -241,6 +347,9 @@ async function startServer() {
   const server = createServer(app);
 
   app.use(express.json());
+
+  // Load price history from disk on startup
+  loadPriceHistory();
 
   // ─── API Routes ───
 
@@ -311,12 +420,16 @@ async function startServer() {
       const paged = filtered.slice(off, off + lim);
 
       const listedCards = allCards.filter((c) => c.price > 0);
-      const arbitrageCount = listedCards.filter((c) => c.spreadPct > 0).length;
+      const arbitrageCount = listedCards.filter(
+        (c) => c.spreadPct > 0
+      ).length;
       const overpricedCount = listedCards.filter(
         (c) => c.spreadPct < 0
       ).length;
       // Calculate avg spread excluding extreme outliers (>200% deviation)
-      const normalCards = listedCards.filter((c) => Math.abs(c.spreadPct) <= 200);
+      const normalCards = listedCards.filter(
+        (c) => Math.abs(c.spreadPct) <= 200
+      );
       const avgSpread =
         normalCards.length > 0
           ? Math.round(
@@ -359,6 +472,95 @@ async function startServer() {
     }
   });
 
+  // ─── Price History API ───
+
+  // Get price history for a specific card
+  app.get("/api/cards/:cardId/history", (req, res) => {
+    try {
+      const { cardId } = req.params;
+      const { days = "30" } = req.query as Record<string, string>;
+      const daysNum = Math.min(parseInt(days) || 30, MAX_HISTORY_DAYS);
+      const cutoff = new Date(
+        Date.now() - daysNum * 24 * 60 * 60 * 1000
+      ).toISOString();
+
+      const history = (priceHistory[cardId] || []).filter(
+        (s) => s.timestamp >= cutoff
+      );
+
+      res.json({
+        cardId,
+        days: daysNum,
+        dataPoints: history.length,
+        history,
+      });
+    } catch (err) {
+      console.error("[API] History error:", err);
+      res.status(500).json({ error: "Failed to fetch history" });
+    }
+  });
+
+  // Get price history for multiple cards (batch)
+  app.post("/api/cards/history/batch", (req, res) => {
+    try {
+      const { cardIds, days = 30 } = req.body as {
+        cardIds: string[];
+        days?: number;
+      };
+      if (!cardIds || !Array.isArray(cardIds)) {
+        return res.status(400).json({ error: "cardIds array required" });
+      }
+
+      const daysNum = Math.min(days || 30, MAX_HISTORY_DAYS);
+      const cutoff = new Date(
+        Date.now() - daysNum * 24 * 60 * 60 * 1000
+      ).toISOString();
+
+      const result: Record<string, PriceSnapshot[]> = {};
+      for (const id of cardIds.slice(0, 50)) {
+        // Max 50 cards per batch
+        result[id] = (priceHistory[id] || []).filter(
+          (s) => s.timestamp >= cutoff
+        );
+      }
+
+      res.json({
+        days: daysNum,
+        cards: result,
+      });
+    } catch (err) {
+      console.error("[API] Batch history error:", err);
+      res.status(500).json({ error: "Failed to fetch batch history" });
+    }
+  });
+
+  // Get history stats (how many cards tracked, total data points)
+  app.get("/api/history/stats", (_req, res) => {
+    const cardCount = Object.keys(priceHistory).length;
+    let totalPoints = 0;
+    let oldestTimestamp = "";
+    let newestTimestamp = "";
+
+    for (const snapshots of Object.values(priceHistory)) {
+      totalPoints += snapshots.length;
+      for (const s of snapshots) {
+        if (!oldestTimestamp || s.timestamp < oldestTimestamp)
+          oldestTimestamp = s.timestamp;
+        if (!newestTimestamp || s.timestamp > newestTimestamp)
+          newestTimestamp = s.timestamp;
+      }
+    }
+
+    res.json({
+      trackedCards: cardCount,
+      totalDataPoints: totalPoints,
+      oldestRecord: oldestTimestamp || null,
+      newestRecord: newestTimestamp || null,
+      maxHistoryDays: MAX_HISTORY_DAYS,
+      snapshotIntervalMinutes: HISTORY_SNAPSHOT_INTERVAL / 60000,
+    });
+  });
+
   // Force refresh
   app.post("/api/cards/refresh", async (_req, res) => {
     try {
@@ -386,14 +588,22 @@ async function startServer() {
 
   const port = process.env.PORT || 3001;
 
-  // Pre-fetch cards on startup
+  // Pre-fetch cards on startup (also records first snapshot)
   console.log("[Server] Pre-fetching card data...");
   getCards().then((cards) => {
     console.log(`[Server] Pre-fetched ${cards.length} cards`);
   });
 
+  // Periodic history snapshots (every 30 min)
+  setInterval(() => {
+    if (cachedCards.length > 0) {
+      recordPriceSnapshot(cachedCards);
+    }
+  }, HISTORY_SNAPSHOT_INTERVAL);
+
   server.listen(port, () => {
     console.log(`[Server] Running on http://localhost:${port}/`);
+    console.log(`[Server] Price history: ${HISTORY_FILE}`);
   });
 }
 

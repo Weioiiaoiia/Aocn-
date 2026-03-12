@@ -4,7 +4,7 @@
  */
 import { useLang } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Globe, ExternalLink, Sparkles, Menu, X, Sun, Moon, Radar } from 'lucide-react';
+import { Globe, ExternalLink, Sparkles, Menu, X, Sun, Moon, Radar, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 
 const LOGO_URL = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663427415692/ByMrgW2BXPeym8jL7YKc6Z/aocn-logo_b94bea11.png';
@@ -50,6 +50,14 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
         <a href="https://discord.gg/renaiss" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline">
           Discord
         </a>
+        <a
+          href="https://t.me/se77ouo"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 hover:underline"
+        >
+          <MessageCircle className="w-3 h-3" /> {t('反馈群', 'Feedback')}
+        </a>
         <span className="hidden sm:inline text-white/70">|</span>
         <a
           href="https://x.com/chen1904o"
@@ -67,7 +75,7 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
           {/* Logo */}
           <div className="flex items-center gap-2.5 shrink-0 cursor-pointer" onClick={() => handleTabClick('dashboard')}>
             <img src={LOGO_URL} alt="AOCN" className="w-8 h-8 rounded-lg" />
-            <span className="text-[15px] font-bold text-foreground">Renaiss {t('套利分析', 'Arbitrage')}</span>
+            <span className="text-[15px] font-bold text-foreground">AOCN</span>
           </div>
 
           {/* Desktop Tabs */}

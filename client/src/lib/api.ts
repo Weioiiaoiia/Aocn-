@@ -1,6 +1,7 @@
 /**
  * AOCN API Service
  * Fetches card data from our server proxy which calls Renaiss tRPC API
+ * Includes price history endpoints for real historical data
  */
 import type { Card } from './data';
 
@@ -33,6 +34,34 @@ export interface FetchCardsResponse {
   };
 }
 
+export interface PriceSnapshot {
+  timestamp: string;
+  price: number;
+  fmv: number;
+  spreadPct: number;
+}
+
+export interface CardHistoryResponse {
+  cardId: string;
+  days: number;
+  dataPoints: number;
+  history: PriceSnapshot[];
+}
+
+export interface BatchHistoryResponse {
+  days: number;
+  cards: Record<string, PriceSnapshot[]>;
+}
+
+export interface HistoryStatsResponse {
+  trackedCards: number;
+  totalDataPoints: number;
+  oldestRecord: string | null;
+  newestRecord: string | null;
+  maxHistoryDays: number;
+  snapshotIntervalMinutes: number;
+}
+
 export async function fetchCards(params: FetchCardsParams = {}): Promise<FetchCardsResponse> {
   const searchParams = new URLSearchParams();
   if (params.offset !== undefined) searchParams.set('offset', String(params.offset));
@@ -57,6 +86,30 @@ export async function fetchAllCards(): Promise<Card[]> {
 
 export async function refreshCards(): Promise<{ success: boolean; count: number }> {
   const resp = await fetch(`${API_BASE}/cards/refresh`, { method: 'POST' });
+  if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+  return resp.json();
+}
+
+// ─── Price History APIs ───
+
+export async function fetchCardHistory(cardId: string, days: number = 30): Promise<CardHistoryResponse> {
+  const resp = await fetch(`${API_BASE}/cards/${cardId}/history?days=${days}`);
+  if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+  return resp.json();
+}
+
+export async function fetchBatchHistory(cardIds: string[], days: number = 30): Promise<BatchHistoryResponse> {
+  const resp = await fetch(`${API_BASE}/cards/history/batch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cardIds, days }),
+  });
+  if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+  return resp.json();
+}
+
+export async function fetchHistoryStats(): Promise<HistoryStatsResponse> {
+  const resp = await fetch(`${API_BASE}/history/stats`);
   if (!resp.ok) throw new Error(`API error: ${resp.status}`);
   return resp.json();
 }
