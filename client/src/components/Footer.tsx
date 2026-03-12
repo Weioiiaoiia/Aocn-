@@ -99,7 +99,7 @@ export default function Footer() {
           <span>© 2026 AOCN.</span>
           <span>Built with</span>
           <Heart className="w-3 h-3 text-rose-500/40" />
-          <span>by 小天才77Ouo, Kuromon, Nora</span>
+          <span>by 小天才77Ouo</span>
         </div>
       </div>
     </footer>

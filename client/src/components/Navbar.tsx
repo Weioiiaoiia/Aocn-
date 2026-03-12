@@ -4,7 +4,7 @@
  */
 import { useLang } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Globe, ExternalLink, Sparkles, Menu, X, Sun, Moon } from 'lucide-react';
+import { Globe, ExternalLink, Sparkles, Menu, X, Sun, Moon, Radar } from 'lucide-react';
 import { useState } from 'react';
 
 const LOGO_URL = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663427415692/ByMrgW2BXPeym8jL7YKc6Z/aocn-logo_b94bea11.png';
@@ -20,6 +20,7 @@ const tabs = [
   { id: 'arbitrage', zh: '套利分析', en: 'Arbitrage', highlight: false },
   { id: 'events', zh: '事件中心', en: 'Events', highlight: false },
   { id: 'sbt', zh: 'SBT 图鉴', en: 'SBT Atlas', highlight: false },
+  { id: 'radar', zh: '实时雷达', en: 'Radar', highlight: true, icon: 'radar' },
   { id: 'simulator', zh: '模拟器', en: 'Simulator', highlight: false },
   { id: 'openclaw', zh: 'Open Claw', en: 'Open Claw', highlight: false },
   { id: 'hackathon', zh: '黑客松', en: 'Hackathon', highlight: false },
@@ -50,7 +51,14 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
           Discord
         </a>
         <span className="hidden sm:inline text-white/70">|</span>
-        <span className="hidden sm:inline text-white/80">{t('作者:', 'By:')} 小天才77Ouo  Kuromon  Nora</span>
+        <a
+          href="https://x.com/chen1904o"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden sm:inline text-white/80 hover:underline hover:text-white cursor-pointer transition-colors"
+        >
+          {t('作者:', 'By:')} 小天才77Ouo
+        </a>
       </div>
 
       {/* Main navbar */}
@@ -70,9 +78,10 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
                 onClick={() => handleTabClick(tab.id)}
                 className={`nav-link text-[13px] px-3 py-1.5 transition-all duration-200 flex items-center gap-1.5 ${
                   activeTab === tab.id ? 'active' : ''
-                }`}
+                } ${tab.id === 'radar' ? 'text-emerald-400' : ''}`}
               >
-                {tab.highlight && <Sparkles className="w-3 h-3" />}
+                {tab.id === 'radar' && <Radar className="w-3 h-3" />}
+                {tab.highlight && tab.id !== 'radar' && <Sparkles className="w-3 h-3" />}
                 {lang === 'zh' ? tab.zh : tab.en}
               </button>
             ))}
@@ -124,9 +133,10 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
                 activeTab === tab.id
                   ? 'text-primary bg-primary/5 font-medium'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
-              }`}
+              } ${tab.id === 'radar' ? 'text-emerald-400' : ''}`}
             >
-              {tab.highlight && <Sparkles className="w-2.5 h-2.5" />}
+              {tab.id === 'radar' && <Radar className="w-2.5 h-2.5" />}
+              {tab.highlight && tab.id !== 'radar' && <Sparkles className="w-2.5 h-2.5" />}
               {lang === 'zh' ? tab.zh : tab.en}
             </button>
           ))}

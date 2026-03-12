@@ -9,6 +9,7 @@ import Arbitrage from '@/pages/Arbitrage';
 import Events from '@/pages/Events';
 import SbtAnalysis from '@/pages/SbtAnalysis';
 import Simulator from '@/pages/Simulator';
+import Radar from '@/pages/Radar';
 import OpenClaw from '@/pages/OpenClaw';
 import Hackathon from '@/pages/Hackathon';
 import BeginnerGuide from '@/pages/BeginnerGuide';
@@ -36,6 +37,7 @@ export default function Home() {
       case 'arbitrage': return <Arbitrage />;
       case 'events': return <Events />;
       case 'sbt': return <SbtAnalysis />;
+      case 'radar': return <Radar />;
       case 'simulator': return <Simulator />;
       case 'openclaw': return <OpenClaw />;
       case 'hackathon': return <Hackathon />;
