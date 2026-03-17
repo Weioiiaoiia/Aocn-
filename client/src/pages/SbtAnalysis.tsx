@@ -3,7 +3,7 @@
  */
 import { useLang } from '@/contexts/LanguageContext';
 import { sbtItems, sbtCatalog, timelineEvents } from '@/lib/data';
-import { Shield, Award, Gift, Link2, ChevronRight, Search, Filter, CheckCircle, XCircle, AlertCircle, Sparkles } from 'lucide-react';
+import { Shield, Award, Gift, Link2, ChevronRight, Search, Filter, CheckCircle, XCircle, AlertCircle, Sparkles, BarChart3, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo } from 'react';
 
@@ -11,6 +11,24 @@ const SBT_IMG = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663427415692/ByMrgW
 
 type FilterType = 'all' | 'available' | 'unavailable';
 type CategoryType = 'all' | 'community' | 'gacha' | 'event' | 'trading' | 'social' | 'special';
+type RarityType = 'all' | 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+
+const rarityLabels: Record<string, { zh: string; en: string; color: string }> = {
+  all: { zh: '全部稀有度', en: 'All Rarity', color: '' },
+  common: { zh: '普通', en: 'Common', color: 'text-gray-500' },
+  uncommon: { zh: '稀有', en: 'Uncommon', color: 'text-green-500' },
+  rare: { zh: '精良', en: 'Rare', color: 'text-blue-500' },
+  epic: { zh: '史诗', en: 'Epic', color: 'text-purple-500' },
+  legendary: { zh: '传说', en: 'Legendary', color: 'text-amber-500' },
+};
+
+function getRarityFromCategory(cat: string, available: boolean, label?: string): string {
+  if (label === '⭕' || cat === 'special') return 'legendary';
+  if (cat === 'event') return 'epic';
+  if (cat === 'trading') return 'rare';
+  if (cat === 'gacha') return 'uncommon';
+  return 'common';
+}
 
 const categoryLabels: Record<string, { zh: string; en: string }> = {
   all: { zh: '全部', en: 'All' },
@@ -46,7 +64,8 @@ export default function SbtAnalysis() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [categoryFilter, setCategoryFilter] = useState<CategoryType>('all');
-  const [viewMode, setViewMode] = useState<'catalog' | 'deep'>('catalog');
+  const [rarityFilter, setRarityFilter] = useState<RarityType>('all');
+  const [viewMode, setViewMode] = useState<'catalog' | 'deep' | 'stats'>('catalog');
   const [selectedDeepId, setSelectedDeepId] = useState<string | null>(null);
   const selectedDeep = sbtItems.find(s => s.id === selectedDeepId);
   const selectedCatalog = sbtCatalog.find(s => s.id === selectedCatalogId);
@@ -60,9 +79,31 @@ export default function SbtAnalysis() {
       if (filterType === 'available' && !sbt.available) return false;
       if (filterType === 'unavailable' && sbt.available) return false;
       if (categoryFilter !== 'all' && sbt.category !== categoryFilter) return false;
+      if (rarityFilter !== 'all') {
+        const rarity = getRarityFromCategory(sbt.category, sbt.available, sbt.availableLabel);
+        if (rarity !== rarityFilter) return false;
+      }
       return true;
     });
-  }, [searchQuery, filterType, categoryFilter]);
+  }, [searchQuery, filterType, categoryFilter, rarityFilter]);
+
+  // Stats for the chart view
+  const categoryStats = useMemo(() => {
+    const stats: Record<string, number> = {};
+    sbtCatalog.forEach(sbt => {
+      stats[sbt.category] = (stats[sbt.category] || 0) + 1;
+    });
+    return stats;
+  }, []);
+
+  const rarityStats = useMemo(() => {
+    const stats: Record<string, number> = { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 };
+    sbtCatalog.forEach(sbt => {
+      const r = getRarityFromCategory(sbt.category, sbt.available, sbt.availableLabel);
+      stats[r] = (stats[r] || 0) + 1;
+    });
+    return stats;
+  }, []);
 
   const availableCount = sbtCatalog.filter(s => s.available).length;
   const totalCount = sbtCatalog.length;
@@ -109,6 +150,13 @@ export default function SbtAnalysis() {
         >
           {t('深度分析', 'Deep Analysis')} ({sbtItems.length})
         </button>
+        <button
+          onClick={() => setViewMode('stats')}
+          className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-all flex items-center gap-1.5 ${viewMode === 'stats' ? 'bg-amber-100 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-secondary border border-border text-muted-foreground hover:text-foreground'}`}
+        >
+          <BarChart3 className="w-3.5 h-3.5" />
+          {t('数据可视化', 'Data Viz')}
+        </button>
       </div>
 
       {viewMode === 'catalog' ? (
@@ -139,7 +187,7 @@ export default function SbtAnalysis() {
           </div>
 
           {/* Category Filter */}
-          <div className="flex flex-wrap gap-1.5 mb-4">
+          <div className="flex flex-wrap gap-1.5 mb-3">
             {(Object.keys(categoryLabels) as CategoryType[]).map(cat => (
               <button
                 key={cat}
@@ -147,6 +195,20 @@ export default function SbtAnalysis() {
                 className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${categoryFilter === cat ? 'bg-purple-100 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 text-purple-600 dark:text-purple-400' : 'bg-secondary border border-border text-muted-foreground hover:text-foreground'}`}
               >
                 {t(categoryLabels[cat].zh, categoryLabels[cat].en)}
+              </button>
+            ))}
+          </div>
+
+          {/* Rarity Filter */}
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            <Star className="w-3.5 h-3.5 text-muted-foreground mt-0.5" />
+            {(Object.keys(rarityLabels) as RarityType[]).map(r => (
+              <button
+                key={r}
+                onClick={() => setRarityFilter(r)}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${rarityFilter === r ? 'bg-amber-100 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-secondary border border-border text-muted-foreground hover:text-foreground'}`}
+              >
+                <span className={r !== 'all' ? rarityLabels[r].color : ''}>{t(rarityLabels[r].zh, rarityLabels[r].en)}</span>
               </button>
             ))}
           </div>
@@ -251,6 +313,91 @@ export default function SbtAnalysis() {
                   </motion.div>
                 )}
               </AnimatePresence>
+            </div>
+          </div>
+        </div>
+      ) : viewMode === 'stats' ? (
+        /* Data Visualization View */
+        <div className="space-y-6">
+          {/* Category Distribution */}
+          <div className="glass-card rounded-xl p-6">
+            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary" />
+              {t('分类分布', 'Category Distribution')}
+            </h3>
+            <div className="space-y-3">
+              {Object.entries(categoryStats).map(([cat, count]) => {
+                const pct = Math.round((count / totalCount) * 100);
+                const label = categoryLabels[cat] || { zh: cat, en: cat };
+                return (
+                  <div key={cat}>
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-foreground font-medium">{t(label.zh, label.en)}</span>
+                      <span className="text-muted-foreground">{count} ({pct}%)</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-secondary overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full bg-primary/60"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.6, delay: 0.1 }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Rarity Distribution */}
+          <div className="glass-card rounded-xl p-6">
+            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+              <Star className="w-4 h-4 text-amber-500" />
+              {t('\u7a00\u6709\u5ea6\u5206\u5e03', 'Rarity Distribution')}
+            </h3>
+            <div className="grid grid-cols-5 gap-3">
+              {Object.entries(rarityStats).map(([rarity, count]) => {
+                const label = rarityLabels[rarity];
+                if (!label) return null;
+                return (
+                  <motion.div
+                    key={rarity}
+                    className="text-center glass-card rounded-xl p-4"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1 }}
+                  >
+                    <div className={`text-2xl font-bold font-mono ${label.color || 'text-foreground'}`}>{count}</div>
+                    <div className="text-[10px] text-muted-foreground mt-1">{t(label.zh, label.en)}</div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Availability Pie */}
+          <div className="glass-card rounded-xl p-6">
+            <h3 className="text-sm font-semibold text-foreground mb-4">{t('\u53ef\u83b7\u53d6\u72b6\u6001', 'Availability Status')}</h3>
+            <div className="flex items-center gap-8">
+              <div className="relative w-32 h-32">
+                <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" strokeWidth="3" className="text-secondary" />
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-500" strokeDasharray={`${(availableCount / totalCount) * 100} ${100 - (availableCount / totalCount) * 100}`} />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-lg font-bold text-foreground">{Math.round((availableCount / totalCount) * 100)}%</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                  <span className="text-xs text-foreground">{t('\u53ef\u83b7\u53d6', 'Available')}: {availableCount}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-secondary border border-border" />
+                  <span className="text-xs text-muted-foreground">{t('\u5df2\u7ed3\u675f/\u7279\u6b8a', 'Ended/Special')}: {totalCount - availableCount}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

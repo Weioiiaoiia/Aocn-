@@ -1,0 +1,86 @@
+# AOCN OpenClaw Integration — Docker Compose
+# Provides persistent browser + market scraper + arbitrage bot
+#
+# Usage:
+#   cp .env.example .env  # Fill in your tokens
+#   docker compose up -d
+#   docker compose logs -f aocn-scraper
+#
+# Architecture:
+#   1. chromium — Persistent headless Chromium with CDP (port 9222)
+#   2. aocn-scraper — Python scraper connecting via CDP, polls every 15s
+#   3. aocn-bot — Telegram bot for arbitrage alerts (optional)
+
+version: "3.9"
+
+services:
+  # ── Persistent Chromium Browser ──
+  chromium:
+    image: zenika/alpine-chrome:with-puppeteer
+    container_name: aocn-chromium
+    restart: unless-stopped
+    command:
+      - chromium-browser
+      - --headless=new
+      - --no-sandbox
+      - --disable-gpu
+      - --disable-dev-shm-usage
+      - --remote-debugging-address=0.0.0.0
+      - --remote-debugging-port=9222
+      - --user-data-dir=/data/chrome-profile
+      - --disable-background-timer-throttling
+      - --disable-backgrounding-occluded-windows
+      - --disable-renderer-backgrounding
+    ports:
+      - "9222:9222"
+    volumes:
+      - chrome-data:/data/chrome-profile
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9222/json/version"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── AOCN Market Scraper ──
+  aocn-scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile.scraper
+    container_name: aocn-scraper
+    restart: unless-stopped
+    depends_on:
+      chromium:
+        condition: service_healthy
+    environment:
+      - CDP_ENDPOINT=ws://chromium:9222
+      - SCRAPE_INTERVAL=${SCRAPE_INTERVAL:-15}
+      - API_WEBHOOK_URL=${API_WEBHOOK_URL:-}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./data:/app/data
+      - ./skills:/app/skills
+      - ./logs:/app/logs
+
+  # ── Telegram Arbitrage Bot (optional) ──
+  aocn-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: aocn-bot
+    restart: unless-stopped
+    depends_on:
+      - aocn-scraper
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+      - ALERT_THRESHOLD_PCT=${ALERT_THRESHOLD_PCT:-5}
+      - DATA_DIR=/app/data
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    profiles:
+      - bot  # Only starts with: docker compose --profile bot up
+
+volumes:
+  chrome-data:

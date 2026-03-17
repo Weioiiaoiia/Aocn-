@@ -6,6 +6,7 @@ import { useLang } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Globe, ExternalLink, Sparkles, Menu, X, Sun, Moon, Radar, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
+import NotificationBell from './NotificationBell';
 
 const LOGO_URL = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663427415692/ByMrgW2BXPeym8jL7YKc6Z/aocn-logo_b94bea11.png';
 
@@ -102,6 +103,9 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
               <div className="live-dot" />
               {t('实时数据', 'Live Data')}
             </div>
+
+            {/* Notification Bell */}
+            <NotificationBell />
 
             {/* Theme toggle */}
             <button

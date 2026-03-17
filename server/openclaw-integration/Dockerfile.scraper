@@ -1,0 +1,19 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system deps for Playwright CDP connection
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget curl && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY scraper/ ./scraper/
+COPY skills/ ./skills/
+COPY config.yaml .
+
+RUN mkdir -p /app/data /app/logs
+
+CMD ["python", "-m", "scraper.main"]

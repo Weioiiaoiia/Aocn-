@@ -1,0 +1,52 @@
+# AOCN OpenClaw Integration — Configuration
+# This file controls the scraper behavior and target URLs
+
+scraper:
+  # Renaiss marketplace URL
+  target_url: "https://www.renaiss.xyz/marketplace"
+  # tRPC API endpoint (faster than scraping HTML)
+  trpc_endpoint: "https://www.renaiss.xyz/trpc"
+  # Scrape interval in seconds (minimum 10)
+  interval: 15
+  # Request timeout in seconds
+  timeout: 30
+  # Max retries per cycle
+  max_retries: 3
+  # Retry delay base (exponential backoff)
+  retry_delay: 2
+
+browser:
+  # CDP endpoint (set by docker-compose, can override here)
+  cdp_endpoint: "ws://localhost:9222"
+  # Persistent user data directory
+  user_data_dir: "/data/chrome-profile"
+  # Viewport size
+  viewport:
+    width: 1280
+    height: 720
+  # Navigation timeout
+  navigation_timeout: 30000
+  # Wait for network idle
+  wait_until: "networkidle"
+
+output:
+  # Local JSON file for scraped data
+  data_file: "/app/data/market_snapshot.json"
+  # Price history file
+  history_file: "/app/data/price_history.json"
+  # Max history entries per card
+  max_history_per_card: 1000
+
+alerts:
+  # Minimum spread percentage to trigger alert
+  min_spread_pct: 5
+  # Cooldown between alerts for same card (seconds)
+  alert_cooldown: 300
+  # Maximum alerts per hour
+  max_alerts_per_hour: 20
+
+logging:
+  level: "INFO"
+  file: "/app/logs/scraper.log"
+  max_size_mb: 50
+  backup_count: 5

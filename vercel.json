@@ -4,6 +4,9 @@
   "framework": null,
   "rewrites": [
     { "source": "/api/cards", "destination": "/api/cards" },
+    { "source": "/api/events", "destination": "/api/events" },
+    { "source": "/api/stream", "destination": "/api/stream" },
+    { "source": "/api/sbt", "destination": "/api/sbt" },
     { "source": "/api/refresh", "destination": "/api/refresh" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
@@ -11,6 +14,18 @@
     "api/cards.ts": {
       "maxDuration": 60,
       "memory": 1024
+    },
+    "api/events.ts": {
+      "maxDuration": 30,
+      "memory": 512
+    },
+    "api/stream.ts": {
+      "maxDuration": 30,
+      "memory": 512
+    },
+    "api/sbt.ts": {
+      "maxDuration": 10,
+      "memory": 256
     },
     "api/refresh.ts": {
       "maxDuration": 10

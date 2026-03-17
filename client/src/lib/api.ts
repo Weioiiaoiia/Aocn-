@@ -2,14 +2,17 @@
  * AOCN API Service
  * Fetches card data from our server proxy which calls Renaiss tRPC API
  * Includes price history endpoints for real historical data
- * Enhanced with retry logic, timeout control, and error recovery
+ * Enhanced with SSE real-time push, retry logic, timeout control, and error recovery
+ * 
+ * OPTIMIZED: 15s polling + SSE for real-time monitoring
  */
 import type { Card } from './data';
 
 const API_BASE = '/api';
 const MAX_RETRIES = 3;
-const RETRY_DELAY_BASE = 1000; // 1s, doubles each retry
-const FETCH_TIMEOUT = 30000; // 30 seconds timeout
+const RETRY_DELAY_BASE = 1000;
+const FETCH_TIMEOUT = 30000;
+const POLLING_INTERVAL = 15_000; // 15 seconds
 
 export interface FetchCardsParams {
   offset?: number;
@@ -19,6 +22,14 @@ export interface FetchCardsParams {
   search?: string;
   category?: string;
   listedOnly?: boolean;
+  // Advanced filters
+  gradingCompany?: string;
+  gradeFilter?: string;
+  languageFilter?: string;
+  yearMin?: number;
+  yearMax?: number;
+  priceMin?: number;
+  priceMax?: number;
 }
 
 export interface FetchCardsResponse {
@@ -35,6 +46,18 @@ export interface FetchCardsResponse {
     arbitrageCount: number;
     overpricedCount: number;
     avgSpread: number;
+  };
+  filters?: {
+    categories: string[];
+    gradingCompanies: string[];
+    grades: string[];
+    languages: string[];
+  };
+  meta?: {
+    cacheAge: number | null;
+    isStale: boolean;
+    cacheTTL: number;
+    timestamp: string;
   };
 }
 
@@ -64,6 +87,35 @@ export interface HistoryStatsResponse {
   newestRecord: string | null;
   maxHistoryDays: number;
   snapshotIntervalMinutes: number;
+}
+
+// ─── SSE / Real-time Event Types ───
+export interface RealTimeEvent {
+  type: 'price_update' | 'arbitrage_alert' | 'sbt_update' | 'activity';
+  cardId?: string;
+  cardName?: string;
+  price?: number;
+  fmv?: number;
+  spreadPct?: number;
+  imgUrl?: string;
+  message?: string;
+  timestamp: string;
+}
+
+export interface EventsResponse {
+  activities: RealTimeEvent[];
+  arbitrageAlerts: RealTimeEvent[];
+  stats: {
+    totalCards: number;
+    listedCards: number;
+    arbitrageCount: number;
+    avgSpread: number;
+  };
+  meta: {
+    timestamp: string;
+    cacheAge: number | null;
+    nextRefresh: number;
+  };
 }
 
 // ─── Robust fetch with timeout and retry ───
@@ -113,15 +165,21 @@ export async function fetchCards(params: FetchCardsParams = {}): Promise<FetchCa
     if (params.search) searchParams.set('search', params.search);
     if (params.category) searchParams.set('category', params.category);
     if (params.listedOnly) searchParams.set('listedOnly', 'true');
+    // Advanced filters
+    if (params.gradingCompany) searchParams.set('gradingCompany', params.gradingCompany);
+    if (params.gradeFilter) searchParams.set('gradeFilter', params.gradeFilter);
+    if (params.languageFilter) searchParams.set('languageFilter', params.languageFilter);
+    if (params.yearMin) searchParams.set('yearMin', String(params.yearMin));
+    if (params.yearMax) searchParams.set('yearMax', String(params.yearMax));
+    if (params.priceMin) searchParams.set('priceMin', String(params.priceMin));
+    if (params.priceMax) searchParams.set('priceMax', String(params.priceMax));
 
     const resp = await fetchWithTimeout(`${API_BASE}/cards?${searchParams.toString()}`);
     if (!resp.ok) throw new Error(`API error: ${resp.status} ${resp.statusText}`);
     const data = await resp.json();
-    // Cache successful response
     cachedCardsResponse = data;
     return data;
   }, MAX_RETRIES, 'fetchCards').catch(err => {
-    // Return cached data if available on total failure
     if (cachedCardsResponse) {
       console.warn('[fetchCards] Using cached data after all retries failed');
       return cachedCardsResponse;
@@ -148,20 +206,117 @@ export async function fetchAllCards(): Promise<Card[]> {
 
 export async function refreshCards(): Promise<{ success: boolean; count: number }> {
   return fetchWithRetry(async () => {
-    const resp = await fetchWithTimeout(`${API_BASE}/refresh`, { method: 'POST' }, 60000); // 60s timeout for refresh
+    const resp = await fetchWithTimeout(`${API_BASE}/refresh`, { method: 'POST' }, 60000);
     if (!resp.ok) throw new Error(`API error: ${resp.status} ${resp.statusText}`);
     return resp.json();
   }, MAX_RETRIES, 'refreshCards');
 }
 
-// ─── Price History APIs ───
+// ─── Real-time Events API ───
+export async function fetchEvents(): Promise<EventsResponse> {
+  return fetchWithRetry(async () => {
+    const resp = await fetchWithTimeout(`${API_BASE}/events`, {}, 15000);
+    if (!resp.ok) throw new Error(`API error: ${resp.status} ${resp.statusText}`);
+    return resp.json();
+  }, 2, 'fetchEvents');
+}
 
+// ─── SSE Stream Connection ───
+export type SSECallback = (event: RealTimeEvent) => void;
+
+export function connectSSE(onEvent: SSECallback, onError?: (err: Event) => void): EventSource | null {
+  if (typeof EventSource === 'undefined') {
+    console.warn('[SSE] EventSource not supported');
+    return null;
+  }
+
+  try {
+    const es = new EventSource(`${API_BASE}/stream`);
+
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'snapshot' && data.cards) {
+          for (const card of data.cards) {
+            onEvent({
+              type: 'price_update',
+              cardId: card.id,
+              cardName: card.name,
+              price: card.price,
+              fmv: card.fmv,
+              spreadPct: card.spreadPct,
+              imgUrl: card.imgUrl,
+              timestamp: data.timestamp,
+            });
+          }
+        } else if (data.type === 'arbitrage' && data.cards) {
+          for (const card of data.cards) {
+            onEvent({
+              type: 'arbitrage_alert',
+              cardId: card.id,
+              cardName: card.name,
+              price: card.price,
+              fmv: card.fmv,
+              spreadPct: card.spreadPct,
+              imgUrl: card.imgUrl,
+              timestamp: data.timestamp,
+            });
+          }
+        }
+      } catch (err) {
+        console.error('[SSE] Parse error:', err);
+      }
+    };
+
+    es.onerror = (err) => {
+      console.warn('[SSE] Connection error, will auto-reconnect');
+      if (onError) onError(err);
+    };
+
+    return es;
+  } catch (err) {
+    console.error('[SSE] Failed to connect:', err);
+    return null;
+  }
+}
+
+// ─── Polling-based real-time updates ───
+export type PollingCallback = (data: FetchCardsResponse) => void;
+
+let pollingTimer: ReturnType<typeof setInterval> | null = null;
+
+export function startPolling(callback: PollingCallback, interval = POLLING_INTERVAL): void {
+  stopPolling();
+  
+  // Immediate first fetch
+  fetchCards({ limit: 50, sortBy: 'listDate', sortOrder: 'desc' })
+    .then(callback)
+    .catch(err => console.error('[Polling] Initial fetch error:', err));
+
+  pollingTimer = setInterval(async () => {
+    try {
+      const data = await fetchCards({ limit: 50, sortBy: 'listDate', sortOrder: 'desc' });
+      callback(data);
+    } catch (err) {
+      console.error('[Polling] Error:', err);
+    }
+  }, interval);
+}
+
+export function stopPolling(): void {
+  if (pollingTimer) {
+    clearInterval(pollingTimer);
+    pollingTimer = null;
+  }
+}
+
+// ─── Price History APIs ───
 export async function fetchCardHistory(cardId: string, days: number = 30): Promise<CardHistoryResponse> {
   return fetchWithRetry(async () => {
     const resp = await fetchWithTimeout(`${API_BASE}/cards/${encodeURIComponent(cardId)}/history?days=${days}`);
     if (!resp.ok) throw new Error(`API error: ${resp.status} ${resp.statusText}`);
     return resp.json();
-  }, 2, 'fetchCardHistory'); // Only 2 retries for history (less critical)
+  }, 2, 'fetchCardHistory');
 }
 
 export async function fetchBatchHistory(cardIds: string[], days: number = 30): Promise<BatchHistoryResponse> {
