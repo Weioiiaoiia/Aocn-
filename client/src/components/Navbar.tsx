@@ -4,7 +4,7 @@
  */
 import { useLang } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Globe, ExternalLink, Sparkles, Menu, X, Sun, Moon, Radar, MessageCircle } from 'lucide-react';
+import { Globe, ExternalLink, Sparkles, Menu, X, Sun, Moon, Radar, MessageCircle, Link2 } from 'lucide-react';
 import { useState } from 'react';
 import NotificationBell from './NotificationBell';
 
@@ -19,6 +19,7 @@ const tabs = [
   { id: 'dashboard', zh: '首页', en: 'Home', highlight: false },
   { id: 'beginner', zh: '新手专区', en: 'Beginner', highlight: true },
   { id: 'arbitrage', zh: '套利分析', en: 'Arbitrage', highlight: false },
+  { id: 'psa', zh: 'PSA连号检测', en: 'PSA Detection', highlight: true },
   { id: 'events', zh: '事件中心', en: 'Events', highlight: false },
   { id: 'sbt', zh: 'SBT 图鉴', en: 'SBT Atlas', highlight: false },
   { id: 'radar', zh: '实时雷达', en: 'Radar', highlight: true, icon: 'radar' },
@@ -87,10 +88,11 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
                 onClick={() => handleTabClick(tab.id)}
                 className={`nav-link text-[13px] px-3 py-1.5 transition-all duration-200 flex items-center gap-1.5 ${
                   activeTab === tab.id ? 'active' : ''
-                } ${tab.id === 'radar' ? 'text-emerald-400' : ''}`}
+                } ${tab.id === 'radar' ? 'text-emerald-400' : ''} ${tab.id === 'psa' ? 'text-purple-500' : ''}`}
               >
                 {tab.id === 'radar' && <Radar className="w-3 h-3" />}
-                {tab.highlight && tab.id !== 'radar' && <Sparkles className="w-3 h-3" />}
+                {tab.id === 'psa' && <Link2 className="w-3 h-3" />}
+                {tab.highlight && tab.id !== 'radar' && tab.id !== 'psa' && <Sparkles className="w-3 h-3" />}
                 {lang === 'zh' ? tab.zh : tab.en}
               </button>
             ))}
@@ -145,10 +147,11 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
                 activeTab === tab.id
                   ? 'text-primary bg-primary/5 font-medium'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
-              } ${tab.id === 'radar' ? 'text-emerald-400' : ''}`}
+              } ${tab.id === 'radar' ? 'text-emerald-400' : ''} ${tab.id === 'psa' ? 'text-purple-500' : ''}`}
             >
               {tab.id === 'radar' && <Radar className="w-2.5 h-2.5" />}
-              {tab.highlight && tab.id !== 'radar' && <Sparkles className="w-2.5 h-2.5" />}
+              {tab.id === 'psa' && <Link2 className="w-2.5 h-2.5" />}
+              {tab.highlight && tab.id !== 'radar' && tab.id !== 'psa' && <Sparkles className="w-2.5 h-2.5" />}
               {lang === 'zh' ? tab.zh : tab.en}
             </button>
           ))}

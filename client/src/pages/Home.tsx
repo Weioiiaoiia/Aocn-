@@ -13,6 +13,7 @@ import Radar from '@/pages/Radar';
 import OpenClaw from '@/pages/OpenClaw';
 import Hackathon from '@/pages/Hackathon';
 import BeginnerGuide from '@/pages/BeginnerGuide';
+import PsaDetection from '@/pages/PsaDetection';
 import { ArrowUp } from 'lucide-react';
 
 export default function Home() {
@@ -35,6 +36,7 @@ export default function Home() {
       case 'dashboard': return <Dashboard onNavigate={handleTabChange} />;
       case 'beginner': return <BeginnerGuide />;
       case 'arbitrage': return <Arbitrage />;
+      case 'psa': return <PsaDetection />;
       case 'events': return <Events />;
       case 'sbt': return <SbtAnalysis />;
       case 'radar': return <Radar />;
