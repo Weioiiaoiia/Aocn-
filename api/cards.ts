@@ -177,32 +177,69 @@ async function fetchBatch(offset: number, limit: number): Promise<RawCard[]> {
 async function fetchAllFromRenaiss(): Promise<ParsedCard[]> {
   const allCards: ParsedCard[] = [];
   const seenIds = new Set<string>();
-  let offset = 0;
   const limit = 50;
-  let hasMore = true;
-  let consecutivePageErrors = 0;
+  let total = 0;
+  const CONCURRENCY = 3;
+  const MAX_RETRIES_PER_PAGE = 5;
 
-  while (hasMore) {
-    try {
-      const input = buildTrpcInput(offset, limit);
-      const url = `${RENAISS_API}?batch=1&input=${encodeURIComponent(input)}`;
-
-      const resp = await fetchWithTimeout(url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          Accept: "*/*",
-          Referer: "https://www.renaiss.xyz/marketplace",
-        },
-      }, 12000);
-
-      if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+  // Step 1: Get total count
+  try {
+    const input = buildTrpcInput(0, 1);
+    const url = `${RENAISS_API}?batch=1&input=${encodeURIComponent(input)}`;
+    const resp = await fetchWithTimeout(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "*/*",
+        Referer: "https://www.renaiss.xyz/marketplace",
+      },
+    }, 15000);
+    if (resp.ok) {
       const data = await resp.json();
-      const result = data[0]?.result?.data?.json;
-      if (!result) break;
+      total = data[0]?.result?.data?.json?.pagination?.total || 0;
+    }
+  } catch { total = 5000; }
 
-      const collection = result.collection || [];
-      const pagination = result.pagination || {};
+  // Step 2: Build all offsets
+  const offsets: number[] = [];
+  for (let o = 0; o < (total || 5000) + limit; o += limit) {
+    offsets.push(o);
+  }
 
+  // Step 3: Fetch page with retry
+  async function fetchPage(offset: number): Promise<RawCard[]> {
+    for (let attempt = 0; attempt < MAX_RETRIES_PER_PAGE; attempt++) {
+      try {
+        const input = buildTrpcInput(offset, limit);
+        const url = `${RENAISS_API}?batch=1&input=${encodeURIComponent(input)}`;
+        const resp = await fetchWithTimeout(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            Accept: "*/*",
+            Referer: "https://www.renaiss.xyz/marketplace",
+          },
+        }, 15000);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const result = data[0]?.result?.data?.json;
+        if (!result) return [];
+        return result.collection || [];
+      } catch {
+        if (attempt < MAX_RETRIES_PER_PAGE - 1) {
+          await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt)));
+        }
+      }
+    }
+    return [];
+  }
+
+  // Step 4: Parallel fetch
+  for (let i = 0; i < offsets.length; i += CONCURRENCY) {
+    const batch = offsets.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(batch.map(o => fetchPage(o)));
+
+    let batchEmpty = true;
+    for (const collection of results) {
+      if (collection.length > 0) batchEmpty = false;
       for (const raw of collection) {
         try {
           const card = parseCard(raw);
@@ -212,16 +249,10 @@ async function fetchAllFromRenaiss(): Promise<ParsedCard[]> {
           }
         } catch { /* skip */ }
       }
-
-      hasMore = pagination.hasMore === true && collection.length > 0 && allCards.length < 10000;
-      offset += limit;
-      consecutivePageErrors = 0;
-      await new Promise((r) => setTimeout(r, 50)); // Reduced delay for speed
-    } catch (err) {
-      consecutivePageErrors++;
-      if (consecutivePageErrors >= 3) break;
-      await new Promise((r) => setTimeout(r, 500));
     }
+
+    if (batchEmpty && allCards.length >= (total || 3000) * 0.95) break;
+    await new Promise(r => setTimeout(r, 60));
   }
 
   return allCards;

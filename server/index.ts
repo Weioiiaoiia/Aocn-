@@ -292,73 +292,105 @@ async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 
 async function fetchAllFromRenaiss(): Promise<ParsedCard[]> {
   const allCards: ParsedCard[] = [];
   const seenIds = new Set<string>();
-  let offset = 0;
-  const limit = 50; 
+  const limit = 50;
   let total = 0;
-  let hasMore = true;
-  let consecutivePageErrors = 0;
-  const MAX_PAGE_ERRORS = 3;
+  const CONCURRENCY = 3; // Parallel requests
+  const MAX_RETRIES_PER_PAGE = 5;
 
   console.log("[API] Starting fetch from Renaiss marketplace...");
 
-  while (hasMore) {
-    try {
-      const input = buildTrpcInput(offset, limit);
-      const url = `${RENAISS_API}?batch=1&input=${encodeURIComponent(input)}`;
+  // Step 1: Get total count first
+  try {
+    const input = buildTrpcInput(0, 1);
+    const url = `${RENAISS_API}?batch=1&input=${encodeURIComponent(input)}`;
+    const resp = await fetchWithRetry(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "*/*",
+        Referer: "https://www.renaiss.xyz/marketplace",
+      },
+    }, 3, 20000);
+    const data = await resp.json();
+    total = data[0]?.result?.data?.json?.pagination?.total || 0;
+    console.log(`[API] Total cards reported by Renaiss: ${total}`);
+  } catch (err) {
+    console.error("[API] Failed to get total count:", err);
+    total = 5000; // Fallback estimate
+  }
 
-      const resp = await fetchWithRetry(url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          Accept: "*/*",
-          Referer: "https://www.renaiss.xyz/marketplace",
-        },
-      }, 2, 20000);
+  // Step 2: Build all offsets we need to fetch
+  const offsets: number[] = [];
+  for (let o = 0; o < total + limit; o += limit) {
+    offsets.push(o);
+  }
 
-      const data = await resp.json();
-      const result = data[0]?.result?.data?.json;
-      if (!result) {
-        console.warn(`[API] No result data at offset ${offset}, stopping.`);
-        break;
+  // Step 3: Fetch in parallel batches with retry
+  async function fetchPage(offset: number): Promise<RawCard[]> {
+    for (let attempt = 0; attempt < MAX_RETRIES_PER_PAGE; attempt++) {
+      try {
+        const input = buildTrpcInput(offset, limit);
+        const url = `${RENAISS_API}?batch=1&input=${encodeURIComponent(input)}`;
+        const resp = await fetchWithRetry(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            Accept: "*/*",
+            Referer: "https://www.renaiss.xyz/marketplace",
+          },
+        }, 2, 20000);
+        const data = await resp.json();
+        const result = data[0]?.result?.data?.json;
+        if (!result) return [];
+        return result.collection || [];
+      } catch (err) {
+        if (attempt < MAX_RETRIES_PER_PAGE - 1) {
+          const delay = 500 * Math.pow(2, attempt) + Math.random() * 300;
+          console.warn(`[API] Page offset=${offset} attempt ${attempt + 1} failed, retrying in ${Math.round(delay)}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+        } else {
+          console.error(`[API] Page offset=${offset} failed after ${MAX_RETRIES_PER_PAGE} attempts`);
+          return [];
+        }
       }
+    }
+    return [];
+  }
 
-      const collection = result.collection || [];
-      const pagination = result.pagination || {};
+  // Process in parallel batches of CONCURRENCY
+  for (let i = 0; i < offsets.length; i += CONCURRENCY) {
+    const batch = offsets.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(batch.map(offset => fetchPage(offset)));
 
-      if (offset === 0) {
-        total = pagination.total || 0;
-        console.log(`[API] Total cards reported by Renaiss: ${total}`);
-      }
-
+    let batchEmpty = true;
+    for (const collection of results) {
+      if (collection.length > 0) batchEmpty = false;
       for (const raw of collection) {
         try {
-          const card = parseCard(raw);
+          const card = parseCard(raw as any);
           if (!seenIds.has(card.id)) {
             seenIds.add(card.id);
             allCards.push(card);
           }
         } catch (parseErr) {
-          console.warn(`[API] Failed to parse card at offset ${offset}:`, parseErr);
+          // skip unparseable
         }
       }
-
-      hasMore = pagination.hasMore === true && collection.length > 0 && allCards.length < 10000; 
-      offset += limit;
-      consecutivePageErrors = 0; 
-
-      if (offset % 500 === 0 || !hasMore) {
-        console.log(`[API] Progress: ${allCards.length}/${total || 'unknown'} cards fetched`);
-      }
-
-      await new Promise((r) => setTimeout(r, 100));
-    } catch (err) {
-      consecutivePageErrors++;
-      console.error(`[API] Error at offset ${offset} (${consecutivePageErrors}/${MAX_PAGE_ERRORS}):`, err);
-      if (consecutivePageErrors >= MAX_PAGE_ERRORS) break;
-      await new Promise((r) => setTimeout(r, 1000));
     }
+
+    // Log progress every few batches
+    if ((i / CONCURRENCY) % 5 === 0 || i + CONCURRENCY >= offsets.length) {
+      console.log(`[API] Progress: ${allCards.length}/${total} cards fetched (offset batch ${i}-${i + CONCURRENCY - 1})`);
+    }
+
+    // If all pages in this batch returned empty and we've passed the reported total, stop
+    if (batchEmpty && allCards.length >= total * 0.95) {
+      break;
+    }
+
+    // Small delay between batches to be polite
+    await new Promise(r => setTimeout(r, 80));
   }
 
-  console.log(`[API] Fetch complete. Total unique cards: ${allCards.length}`);
+  console.log(`[API] Fetch complete. Total unique cards: ${allCards.length} (API reported: ${total})`);
   return allCards;
 }
 
